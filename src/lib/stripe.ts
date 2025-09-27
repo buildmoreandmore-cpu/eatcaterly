@@ -2,7 +2,7 @@ import Stripe from 'stripe'
 import { prisma } from './db'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-01-27.beta0',
+  apiVersion: '2025-08-27.basil',
 })
 
 export interface PaymentLinkResult {

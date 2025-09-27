@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { broadcastMenu } from '@/lib/sms'
 
 export async function POST() {
