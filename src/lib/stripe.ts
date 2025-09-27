@@ -2,11 +2,14 @@ import Stripe from 'stripe'
 import { prisma } from './db'
 import { isDemoMode, demoPaymentResult, demoWebhookResult } from './demo-mode'
 
-const stripe = process.env.STRIPE_SECRET_KEY
-  ? new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: '2025-08-27.basil',
-    })
-  : null
+function getStripeClient() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    return null
+  }
+  return new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2025-08-27.basil',
+  })
+}
 
 export interface PaymentLinkResult {
   paymentLinkId: string
@@ -24,6 +27,7 @@ export interface WebhookResult {
  */
 export async function createPaymentLink(orderId: string): Promise<PaymentLinkResult> {
   try {
+    const stripe = getStripeClient()
     if (isDemoMode() || !stripe) {
       console.log('Demo mode: Payment link would be created for order', orderId)
 
@@ -129,6 +133,7 @@ export async function handleWebhook(
   signature: string
 ): Promise<WebhookResult> {
   try {
+    const stripe = getStripeClient()
     if (isDemoMode() || !stripe) {
       console.log('Demo mode: Webhook would be processed')
       return demoWebhookResult
@@ -236,6 +241,7 @@ export async function createSimplePaymentLink(
   metadata: Record<string, string> = {}
 ): Promise<PaymentLinkResult> {
   try {
+    const stripe = getStripeClient()
     if (isDemoMode() || !stripe) {
       console.log('Demo mode: Simple payment link would be created for', description, amount)
       return demoPaymentResult
@@ -278,6 +284,7 @@ export async function createSimplePaymentLink(
  */
 export async function getPaymentLink(paymentLinkId: string) {
   try {
+    const stripe = getStripeClient()
     if (isDemoMode() || !stripe) {
       console.log('Demo mode: Payment link retrieval for', paymentLinkId)
       return { id: paymentLinkId, url: demoPaymentResult.url }

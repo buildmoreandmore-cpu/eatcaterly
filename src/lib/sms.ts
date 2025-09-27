@@ -2,9 +2,12 @@ import twilio from 'twilio'
 import { prisma } from './db'
 import { isDemoMode, demoSMSResult } from './demo-mode'
 
-const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN
-  ? twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
-  : null
+function getTwilioClient() {
+  if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
+    return null
+  }
+  return twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
+}
 
 export interface SMSResult {
   sid: string
@@ -28,6 +31,7 @@ export async function sendSMS(
   customerId?: string
 ): Promise<SMSResult> {
   try {
+    const twilioClient = getTwilioClient()
     if (isDemoMode() || !twilioClient) {
       console.log('Demo mode: SMS would be sent to', to, 'with message:', message)
 
