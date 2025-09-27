@@ -1,9 +1,11 @@
 import Stripe from 'stripe'
 import { prisma } from './db'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-08-27.basil',
-})
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: '2025-08-27.basil',
+    })
+  : null
 
 export interface PaymentLinkResult {
   paymentLinkId: string
@@ -21,6 +23,10 @@ export interface WebhookResult {
  */
 export async function createPaymentLink(orderId: string): Promise<PaymentLinkResult> {
   try {
+    if (!stripe) {
+      throw new Error('Stripe client not configured')
+    }
+
     // Get order with customer and items
     const order = await prisma.order.findUnique({
       where: { id: orderId },
@@ -110,6 +116,10 @@ export async function handleWebhook(
   signature: string
 ): Promise<WebhookResult> {
   try {
+    if (!stripe) {
+      throw new Error('Stripe client not configured')
+    }
+
     // Verify webhook signature
     const event = stripe.webhooks.constructEvent(
       rawBody,
@@ -212,6 +222,10 @@ export async function createSimplePaymentLink(
   metadata: Record<string, string> = {}
 ): Promise<PaymentLinkResult> {
   try {
+    if (!stripe) {
+      throw new Error('Stripe client not configured')
+    }
+
     const paymentLink = await stripe.paymentLinks.create({
       line_items: [
         {
@@ -249,6 +263,10 @@ export async function createSimplePaymentLink(
  */
 export async function getPaymentLink(paymentLinkId: string) {
   try {
+    if (!stripe) {
+      throw new Error('Stripe client not configured')
+    }
+
     const paymentLink = await stripe.paymentLinks.retrieve(paymentLinkId)
     return paymentLink
   } catch (error: any) {

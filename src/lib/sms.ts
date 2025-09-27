@@ -1,10 +1,9 @@
 import twilio from 'twilio'
 import { prisma } from './db'
 
-const twilioClient = twilio(
-  process.env.TWILIO_ACCOUNT_SID,
-  process.env.TWILIO_AUTH_TOKEN
-)
+const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN
+  ? twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
+  : null
 
 export interface SMSResult {
   sid: string
@@ -28,6 +27,10 @@ export async function sendSMS(
   customerId?: string
 ): Promise<SMSResult> {
   try {
+    if (!twilioClient) {
+      throw new Error('Twilio client not configured')
+    }
+
     const result = await twilioClient.messages.create({
       body: message,
       from: process.env.TWILIO_PHONE_NUMBER,
