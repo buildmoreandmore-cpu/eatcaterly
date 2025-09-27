@@ -1,9 +1,12 @@
+'use client'
+
 import { ReactNode } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import {
   Home,
   Users,
-  Menu,
+  ChefHat,
   ShoppingCart,
   MessageSquare,
   Settings,
@@ -15,10 +18,12 @@ interface AdminLayoutProps {
 }
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
+  const pathname = usePathname()
+
   const navigation = [
     { name: 'Dashboard', href: '/admin', icon: Home },
     { name: 'Customers', href: '/admin/customers', icon: Users },
-    { name: 'Menu Management', href: '/admin/menu', icon: Menu },
+    { name: 'Menu Management', href: '/admin/menus', icon: ChefHat },
     { name: 'Orders', href: '/admin/orders', icon: ShoppingCart },
     { name: 'SMS Logs', href: '/admin/sms', icon: MessageSquare },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
@@ -36,11 +41,16 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <ul className="space-y-2">
             {navigation.map((item) => {
               const Icon = item.icon
+              const isActive = pathname === item.href
               return (
                 <li key={item.name}>
                   <Link
                     href={item.href}
-                    className="flex items-center rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                    className={`flex items-center rounded-lg px-3 py-2 text-sm font-medium ${
+                      isActive
+                        ? 'bg-blue-100 text-blue-900'
+                        : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                    }`}
                   >
                     <Icon className="mr-3 h-5 w-5" />
                     {item.name}
