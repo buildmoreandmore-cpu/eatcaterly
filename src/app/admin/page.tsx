@@ -11,6 +11,9 @@ import {
   AlertTriangle
 } from 'lucide-react'
 
+// Force dynamic rendering for this page
+export const dynamic = 'force-dynamic'
+
 async function getDashboardStats() {
   const [
     totalCustomers,
