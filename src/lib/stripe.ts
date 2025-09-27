@@ -1,5 +1,6 @@
 import Stripe from 'stripe'
 import { prisma } from './db'
+import { isDemoMode, demoPaymentResult, demoWebhookResult } from './demo-mode'
 
 const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY, {
@@ -23,8 +24,20 @@ export interface WebhookResult {
  */
 export async function createPaymentLink(orderId: string): Promise<PaymentLinkResult> {
   try {
-    if (!stripe) {
-      throw new Error('Stripe client not configured')
+    if (isDemoMode() || !stripe) {
+      console.log('Demo mode: Payment link would be created for order', orderId)
+
+      // Update order with demo payment link info
+      await prisma.order.update({
+        where: { id: orderId },
+        data: {
+          paymentId: demoPaymentResult.paymentLinkId,
+          paymentUrl: demoPaymentResult.url,
+          status: 'CONFIRMED',
+        },
+      })
+
+      return demoPaymentResult
     }
 
     // Get order with customer and items
@@ -116,8 +129,9 @@ export async function handleWebhook(
   signature: string
 ): Promise<WebhookResult> {
   try {
-    if (!stripe) {
-      throw new Error('Stripe client not configured')
+    if (isDemoMode() || !stripe) {
+      console.log('Demo mode: Webhook would be processed')
+      return demoWebhookResult
     }
 
     // Verify webhook signature
@@ -222,8 +236,9 @@ export async function createSimplePaymentLink(
   metadata: Record<string, string> = {}
 ): Promise<PaymentLinkResult> {
   try {
-    if (!stripe) {
-      throw new Error('Stripe client not configured')
+    if (isDemoMode() || !stripe) {
+      console.log('Demo mode: Simple payment link would be created for', description, amount)
+      return demoPaymentResult
     }
 
     const paymentLink = await stripe.paymentLinks.create({
@@ -263,8 +278,9 @@ export async function createSimplePaymentLink(
  */
 export async function getPaymentLink(paymentLinkId: string) {
   try {
-    if (!stripe) {
-      throw new Error('Stripe client not configured')
+    if (isDemoMode() || !stripe) {
+      console.log('Demo mode: Payment link retrieval for', paymentLinkId)
+      return { id: paymentLinkId, url: demoPaymentResult.url }
     }
 
     const paymentLink = await stripe.paymentLinks.retrieve(paymentLinkId)

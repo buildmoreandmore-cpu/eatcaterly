@@ -1,5 +1,6 @@
 import twilio from 'twilio'
 import { prisma } from './db'
+import { isDemoMode, demoSMSResult } from './demo-mode'
 
 const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN
   ? twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
@@ -27,8 +28,21 @@ export async function sendSMS(
   customerId?: string
 ): Promise<SMSResult> {
   try {
-    if (!twilioClient) {
-      throw new Error('Twilio client not configured')
+    if (isDemoMode() || !twilioClient) {
+      console.log('Demo mode: SMS would be sent to', to, 'with message:', message)
+
+      // Log demo SMS to database
+      await prisma.smsLog.create({
+        data: {
+          customerId,
+          direction: 'OUTBOUND',
+          message,
+          status: 'SENT',
+          twilioSid: demoSMSResult.sid,
+        },
+      })
+
+      return demoSMSResult
     }
 
     const result = await twilioClient.messages.create({

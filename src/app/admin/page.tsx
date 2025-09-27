@@ -1,12 +1,14 @@
 import { prisma } from '@/lib/db'
 import { Button } from '@/components/ui/button'
+import { isDemoMode } from '@/lib/demo-mode'
 import {
   Users,
   ShoppingCart,
   DollarSign,
   MessageSquare,
   Send,
-  TrendingUp
+  TrendingUp,
+  AlertTriangle
 } from 'lucide-react'
 
 async function getDashboardStats() {
@@ -74,6 +76,7 @@ async function getTodaysMenu() {
 export default async function AdminDashboard() {
   const stats = await getDashboardStats()
   const todaysMenu = await getTodaysMenu()
+  const demoMode = isDemoMode()
 
   const statsCards = [
     {
@@ -115,6 +118,22 @@ export default async function AdminDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Demo Mode Warning */}
+      {demoMode && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <AlertTriangle className="h-5 w-5 text-yellow-600 mr-3" />
+            <div>
+              <h3 className="text-sm font-medium text-yellow-800">Demo Mode Active</h3>
+              <p className="text-sm text-yellow-700 mt-1">
+                Twilio and Stripe are not configured. SMS and payment features will simulate responses.
+                Add your API keys to environment variables for full functionality.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Page Header */}
       <div className="md:flex md:items-center md:justify-between">
         <div className="min-w-0 flex-1">
