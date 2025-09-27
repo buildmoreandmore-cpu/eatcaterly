@@ -1,0 +1,134 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Customer {
+  id          String   @id @default(cuid())
+  phoneNumber String   @unique
+  name        String?
+  email       String?
+  isActive    Boolean  @default(true)
+  preferences Json?    // Store customer preferences as JSON
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  orders    Order[]
+  smsLogs   SmsLog[]
+
+  @@map("customers")
+}
+
+model Menu {
+  id        String     @id @default(cuid())
+  date      DateTime   @unique @db.Date
+  title     String?
+  isActive  Boolean    @default(false)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  // Relations
+  menuItems MenuItem[]
+  orders    Order[]
+
+  @@map("menus")
+}
+
+model MenuItem {
+  id          String  @id @default(cuid())
+  menuId      String
+  name        String
+  description String?
+  price       Int     // Price in cents
+  isAvailable Boolean @default(true)
+  category    String? // e.g., "appetizer", "main", "dessert"
+  imageUrl    String?
+
+  // Relations
+  menu Menu @relation(fields: [menuId], references: [id], onDelete: Cascade)
+
+  @@map("menu_items")
+}
+
+model Order {
+  id           String      @id @default(cuid())
+  customerId   String
+  menuId       String
+  items        Json        // Store ordered items as JSON
+  totalAmount  Int         // Total in cents
+  status       OrderStatus @default(PENDING)
+  paymentId    String?     // Stripe payment intent ID
+  paymentUrl   String?     // Payment link URL
+  deliveryTime String?
+  notes        String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  // Relations
+  customer Customer @relation(fields: [customerId], references: [id])
+  menu     Menu     @relation(fields: [menuId], references: [id])
+
+  @@map("orders")
+}
+
+model SmsLog {
+  id         String     @id @default(cuid())
+  customerId String?
+  direction  SmsDirection
+  message    String
+  status     SmsStatus  @default(SENT)
+  twilioSid  String?    // Twilio message SID
+  errorCode  String?
+  createdAt  DateTime   @default(now())
+
+  // Relations
+  customer Customer? @relation(fields: [customerId], references: [id])
+
+  @@map("sms_logs")
+}
+
+model AdminUser {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String   // Hashed password
+  name      String
+  role      String   @default("admin")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("admin_users")
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PAID
+  PREPARING
+  READY
+  DELIVERED
+  CANCELLED
+}
+
+enum SmsDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum SmsStatus {
+  SENT
+  DELIVERED
+  FAILED
+  RECEIVED
+}
