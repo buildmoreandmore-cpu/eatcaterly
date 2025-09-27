@@ -5,10 +5,10 @@ import { prisma } from '@/lib/db'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { orderId: string } }
+  { params }: { params: Promise<{ orderId: string }> }
 ) {
   try {
-    const { orderId } = params
+    const { orderId } = await params
 
     // Create payment link
     const paymentResult = await createPaymentLink(orderId)
@@ -52,10 +52,10 @@ export async function POST(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { orderId: string } }
+  { params }: { params: Promise<{ orderId: string }> }
 ) {
   try {
-    const { orderId } = params
+    const { orderId } = await params
 
     const order = await prisma.order.findUnique({
       where: { id: orderId },

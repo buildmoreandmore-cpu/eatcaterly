@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { broadcastMenu } from '@/lib/sms'
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     // TODO: Add authentication middleware to protect this endpoint
     const result = await broadcastMenu()

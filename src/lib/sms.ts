@@ -147,7 +147,7 @@ export async function processSMSResponse(
 
   // Handle help requests
   if (lowerMessage.includes('help') || lowerMessage.includes('menu')) {
-    return await sendTodaysMenu(customer.phoneNumber)
+    return await sendTodaysMenu()
   }
 
   // Default response
@@ -202,7 +202,7 @@ async function processOrder(customerId: string, message: string): Promise<string
         menuId: menu.id,
         totalAmount,
         status: 'PENDING',
-        items: validItems.reduce((acc, item, index) => {
+        items: validItems.reduce((acc, item) => {
           acc[item.id] = {
             name: item.name,
             price: item.price,
@@ -257,7 +257,7 @@ function parseItemNumbers(message: string): number[] {
 /**
  * Send today's menu to a customer
  */
-async function sendTodaysMenu(phoneNumber: string): Promise<string> {
+async function sendTodaysMenu(): Promise<string> {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
