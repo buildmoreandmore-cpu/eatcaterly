@@ -98,7 +98,7 @@ export default async function AdminDashboard() {
       color: 'bg-yellow-50 text-yellow-600'
     },
     {
-      title: 'Today\'s Orders',
+      title: 'Today&apos;s Orders',
       value: stats.todaysOrders,
       subtitle: 'Orders today',
       icon: TrendingUp,
@@ -172,7 +172,7 @@ export default async function AdminDashboard() {
       <div className="bg-white shadow rounded-lg">
         <div className="px-4 py-5 sm:p-6">
           <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-            Today's Menu
+            Today&apos;s Menu
           </h3>
           {todaysMenu ? (
             <div>
@@ -212,7 +212,7 @@ export default async function AdminDashboard() {
             <div className="text-center py-6">
               <p className="text-gray-500">No menu set for today</p>
               <Button className="mt-4">
-                Create Today's Menu
+                Create Today&apos;s Menu
               </Button>
             </div>
           )}
