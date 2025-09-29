@@ -47,12 +47,12 @@ describe('Hero', () => {
     expect(screen.getByText('No credit card required')).toBeInTheDocument()
   })
 
-  it('renders the menu card with larger size classes', () => {
+  it('renders the menu card with substantially larger size classes', () => {
     const { container } = render(<Hero />)
     const menuCard = container.querySelector('[data-testid="menu-card"]')
 
-    // Test will fail initially until we make the card bigger
-    expect(menuCard).toHaveClass('max-w-xl') // Expecting xl instead of lg
-    expect(menuCard).toHaveClass('p-12') // Expecting larger padding
+    // Test will fail initially until we make the card much bigger
+    expect(menuCard).toHaveClass('max-w-2xl') // Expecting 2xl for much larger size
+    expect(menuCard).toHaveClass('p-16') // Expecting much larger padding
   })
 })
