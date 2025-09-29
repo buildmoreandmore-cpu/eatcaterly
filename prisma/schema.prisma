@@ -20,14 +20,79 @@ model Customer {
   email       String?
   isActive    Boolean  @default(true)
   preferences Json?    // Store customer preferences as JSON
+  tags        String[] // Customer tags like "VIP", "Regular", "New"
+  category    String?  // Customer category like "Frequent", "Occasional", "One-time"
+  notes       String?  // Admin notes about customer
+  lastOrderAt DateTime? // Track last order date
+  totalOrders Int      @default(0) // Track total order count
+  totalSpent  Int      @default(0) // Track total amount spent (in cents)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   // Relations
-  orders    Order[]
-  smsLogs   SmsLog[]
+  orders          Order[]
+  smsLogs         SmsLog[]
+  customerListMembers CustomerListMember[]
 
   @@map("customers")
+}
+
+model BusinessCustomer {
+  id                   String   @id @default(cuid())
+  businessName         String
+  contactName          String
+  contactEmail         String   @unique
+  zipCode              String
+  assignedPhoneNumber  String   @unique
+  areaCode             String
+  city                 String?
+  state                String?
+  isActive             Boolean  @default(true)
+  onboardingCompleted  Boolean  @default(false)
+  subscriptionStatus   String   @default("trial") // trial, active, suspended, cancelled
+  monthlyLimit         Int      @default(1000) // SMS limit per month
+  currentUsage         Int      @default(0)     // Current month SMS count
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  // Relations
+  customerLists        CustomerList[]
+
+  @@map("business_customers")
+}
+
+model CustomerList {
+  id          String   @id @default(cuid())
+  name        String   // e.g., "VIP Customers", "Lunch Regulars", "Weekend Orders"
+  description String?
+  color       String?  // Hex color for UI
+  isActive    Boolean  @default(true)
+  businessCustomerId String // Which business owns this list
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  businessCustomer BusinessCustomer @relation(fields: [businessCustomerId], references: [id])
+  members          CustomerListMember[]
+
+  @@map("customer_lists")
+}
+
+model CustomerListMember {
+  id             String   @id @default(cuid())
+  customerListId String
+  customerId     String
+  addedAt        DateTime @default(now())
+  addedBy        String?  // Admin who added them
+  notes          String?  // Why they were added to this list
+
+  // Relations
+  customerList CustomerList @relation(fields: [customerListId], references: [id], onDelete: Cascade)
+  customer     Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  // Prevent duplicate entries
+  @@unique([customerListId, customerId])
+  @@map("customer_list_members")
 }
 
 model Menu {

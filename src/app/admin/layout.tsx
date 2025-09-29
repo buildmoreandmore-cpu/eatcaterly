@@ -1,8 +1,8 @@
 'use client'
 
-import { ReactNode } from 'react'
+import { ReactNode, useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import {
   Home,
   Users,
@@ -19,6 +19,20 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const pathname = usePathname()
+  const router = useRouter()
+
+  // Check authentication on mount
+  useEffect(() => {
+    const isAuthenticated = localStorage.getItem('isAuthenticated')
+    if (!isAuthenticated) {
+      router.push('/login')
+    }
+  }, [router])
+
+  const handleLogout = () => {
+    localStorage.removeItem('isAuthenticated')
+    router.push('/')
+  }
 
   const navigation = [
     { name: 'Dashboard', href: '/admin', icon: Home },
@@ -62,7 +76,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         </nav>
 
         <div className="absolute bottom-0 w-full p-4">
-          <button className="flex w-full items-center rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100">
+          <button
+            onClick={handleLogout}
+            className="flex w-full items-center rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+          >
             <LogOut className="mr-3 h-5 w-5" />
             Sign out
           </button>

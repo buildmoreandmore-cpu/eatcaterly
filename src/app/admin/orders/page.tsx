@@ -79,6 +79,14 @@ export default function OrdersPage() {
 
   useEffect(() => {
     fetchOrders()
+    // Check for URL parameters to filter by customer
+    const urlParams = new URLSearchParams(window.location.search)
+    const customerId = urlParams.get('customerId')
+    const customerName = urlParams.get('customerName')
+
+    if (customerId) {
+      setSearchTerm(customerName || customerId)
+    }
   }, [])
 
   const fetchOrders = async () => {

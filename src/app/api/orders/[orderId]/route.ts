@@ -40,11 +40,11 @@ export async function PATCH(
       }
     })
 
-    return NextResponse.json(order)
+    return NextResponse.json({ success: true, data: order })
   } catch (error: any) {
     console.error('Failed to update order:', error)
     return NextResponse.json(
-      { error: 'Failed to update order' },
+      { success: false, error: 'Failed to update order' },
       { status: 500 }
     )
   }
@@ -79,16 +79,16 @@ export async function GET(
 
     if (!order) {
       return NextResponse.json(
-        { error: 'Order not found' },
+        { success: false, error: 'Order not found' },
         { status: 404 }
       )
     }
 
-    return NextResponse.json(order)
+    return NextResponse.json({ success: true, data: order })
   } catch (error: any) {
     console.error('Failed to fetch order:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch order' },
+      { success: false, error: 'Failed to fetch order' },
       { status: 500 }
     )
   }

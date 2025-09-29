@@ -6,10 +6,9 @@ export async function GET() {
   try {
     // Return current environment configuration status
     const settings = {
-      // Don't return actual secrets, just indicate if they're configured
-      twilioAccountSid: process.env.TWILIO_ACCOUNT_SID ? '••••••••••••••••' : '',
-      twilioAuthToken: process.env.TWILIO_AUTH_TOKEN ? '••••••••••••••••' : '',
-      twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER || '',
+      // EZ Texting configuration
+      eztextingUsername: process.env.EZTEXTING_USERNAME || '',
+      eztextingPassword: process.env.EZTEXTING_PASSWORD ? '••••••••••••••••' : '',
 
       stripeSecretKey: process.env.STRIPE_SECRET_KEY ? '••••••••••••••••' : '',
       stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '',
@@ -21,9 +20,12 @@ export async function GET() {
       databaseUrl: process.env.DATABASE_URL ? '••••••••••••••••' : '',
 
       // Feature flags
-      hasTwilio: Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN),
+      hasEZTexting: Boolean(process.env.EZTEXTING_USERNAME && process.env.EZTEXTING_PASSWORD),
       hasStripe: Boolean(process.env.STRIPE_SECRET_KEY),
       hasDatabase: Boolean(process.env.DATABASE_URL),
+
+      // SMS Service status
+      smsService: process.env.EZTEXTING_USERNAME && process.env.EZTEXTING_PASSWORD ? 'EZ Texting' : 'None',
 
       // Notification preferences (would be stored in database in real app)
       emailNotifications: true,

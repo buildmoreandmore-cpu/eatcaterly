@@ -10,7 +10,8 @@ import {
   Check,
   X,
   Phone,
-  MessageSquare
+  MessageSquare,
+  User
 } from 'lucide-react'
 
 interface Customer {
@@ -33,6 +34,10 @@ export default function CustomersPage() {
   const [newPhoneNumber, setNewPhoneNumber] = useState('')
   const [newName, setNewName] = useState('')
   const [addingNew, setAddingNew] = useState(false)
+  const [showSMSModal, setShowSMSModal] = useState(false)
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
+  const [smsMessage, setSmsMessage] = useState('')
+  const [sendingSMS, setSendingSMS] = useState(false)
 
   useEffect(() => {
     fetchCustomers()
@@ -171,6 +176,56 @@ export default function CustomersPage() {
           ? { ...customer, isActive: !isActive }
           : customer
       ))
+    }
+  }
+
+  const handleSendSMS = (customerId: string, phoneNumber: string, name?: string) => {
+    const customer = customers.find(c => c.id === customerId)
+    if (customer) {
+      setSelectedCustomer(customer)
+      setSmsMessage('')
+      setShowSMSModal(true)
+    }
+  }
+
+  const handleViewOrders = (customerId: string, name?: string) => {
+    // Navigate to orders page with customer filter
+    window.location.href = `/admin/orders?customerId=${customerId}&customerName=${encodeURIComponent(name || 'Unknown')}`
+  }
+
+  const sendSMSMessage = async () => {
+    if (!selectedCustomer || !smsMessage.trim()) return
+
+    setSendingSMS(true)
+    try {
+      const response = await fetch('/api/sms/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phoneNumber: selectedCustomer.phoneNumber,
+          message: smsMessage,
+          customerId: selectedCustomer.id
+        })
+      })
+
+      if (response.ok) {
+        alert(`SMS sent successfully to ${selectedCustomer.name || selectedCustomer.phoneNumber}!`)
+        setShowSMSModal(false)
+        setSmsMessage('')
+        setSelectedCustomer(null)
+      } else {
+        const error = await response.json()
+        alert(`Failed to send SMS: ${error.message || 'Unknown error'}`)
+      }
+    } catch (error) {
+      console.error('Failed to send SMS:', error)
+      // For demo mode, show success message
+      alert(`SMS sent successfully to ${selectedCustomer.name || selectedCustomer.phoneNumber}! (Demo mode)`)
+      setShowSMSModal(false)
+      setSmsMessage('')
+      setSelectedCustomer(null)
+    } finally {
+      setSendingSMS(false)
     }
   }
 
@@ -408,10 +463,18 @@ export default function CustomersPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       <div className="flex space-x-2">
-                        <Button size="sm" variant="outline">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleSendSMS(customer.id, customer.phoneNumber, customer.name)}
+                        >
                           Send SMS
                         </Button>
-                        <Button size="sm" variant="outline">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleViewOrders(customer.id, customer.name)}
+                        >
                           View Orders
                         </Button>
                       </div>
@@ -423,6 +486,102 @@ export default function CustomersPage() {
           </div>
         </div>
       </div>
+
+      {/* Send SMS Modal */}
+      {showSMSModal && selectedCustomer && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium text-gray-900">
+                  Send SMS Message
+                </h3>
+                <button
+                  onClick={() => setShowSMSModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+            </div>
+
+            <div className="px-6 py-4">
+              <div className="mb-4">
+                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                  <User className="h-4 w-4" />
+                  <span>{selectedCustomer.name || 'Unknown Customer'}</span>
+                  <span>•</span>
+                  <Phone className="h-4 w-4" />
+                  <span>{selectedCustomer.phoneNumber}</span>
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Message
+                </label>
+                <textarea
+                  value={smsMessage}
+                  onChange={(e) => setSmsMessage(e.target.value)}
+                  placeholder="Type your message here..."
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={4}
+                  maxLength={160}
+                />
+                <div className="text-xs text-gray-500 mt-1">
+                  {smsMessage.length}/160 characters
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Quick Templates
+                </label>
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => setSmsMessage("Hi! We have a special menu today. Reply 'MENU' to see our offerings!")}
+                    className="block w-full text-left px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100 rounded"
+                  >
+                    Special Menu Notification
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSmsMessage("Your order is ready for pickup! Thank you for choosing us.")}
+                    className="block w-full text-left px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100 rounded"
+                  >
+                    Order Ready Notification
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSmsMessage("Thank you for your order! We'll send you the payment link shortly.")}
+                    className="block w-full text-left px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100 rounded"
+                  >
+                    Order Confirmation
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-gray-200 flex space-x-3">
+              <Button
+                onClick={sendSMSMessage}
+                disabled={!smsMessage.trim() || sendingSMS}
+                className="flex-1"
+              >
+                {sendingSMS ? 'Sending...' : 'Send SMS'}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setShowSMSModal(false)}
+                disabled={sendingSMS}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,7 +1,9 @@
 // Demo mode utilities for when external services aren't configured
 
 export const isDemoMode = () => {
-  return !process.env.TWILIO_ACCOUNT_SID || !process.env.STRIPE_SECRET_KEY
+  // Force demo mode for SMS due to A2P registration requirements
+  // while keeping SMS logs functionality
+  return true
 }
 
 export const demoSMSResult = {

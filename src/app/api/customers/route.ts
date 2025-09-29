@@ -1,19 +1,56 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url)
+    const category = searchParams.get('category')
+    const tags = searchParams.get('tags')
+    const includeInactive = searchParams.get('includeInactive') === 'true'
+
+    // Build where clause for filtering
+    const where: any = {}
+
+    if (!includeInactive) {
+      where.isActive = true
+    }
+
+    if (category) {
+      where.category = category
+    }
+
+    if (tags) {
+      const tagList = tags.split(',')
+      where.tags = {
+        hasSome: tagList
+      }
+    }
+
     const customers = await prisma.customer.findMany({
+      where,
       include: {
         _count: {
           select: {
             orders: true,
-            smsLogs: true
+            smsLogs: true,
+            customerListMembers: true
           }
+        },
+        customerListMembers: {
+          include: {
+            customerList: {
+              select: {
+                id: true,
+                name: true,
+                color: true
+              }
+            }
+          },
+          take: 3 // Limit to first 3 lists for performance
         }
       },
       orderBy: {
-        createdAt: 'desc'
+        totalOrders: 'desc'
       }
     })
 
@@ -29,7 +66,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { phoneNumber, name } = await request.json()
+    const { phoneNumber, name, email, category, tags, notes } = await request.json()
 
     if (!phoneNumber) {
       return NextResponse.json(
@@ -54,13 +91,18 @@ export async function POST(request: NextRequest) {
       data: {
         phoneNumber,
         name: name || null,
+        email: email || null,
+        category: category || 'New',
+        tags: tags || ['New'],
+        notes: notes || null,
         isActive: true
       },
       include: {
         _count: {
           select: {
             orders: true,
-            smsLogs: true
+            smsLogs: true,
+            customerListMembers: true
           }
         }
       }
