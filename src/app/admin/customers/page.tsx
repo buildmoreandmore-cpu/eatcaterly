@@ -11,19 +11,35 @@ import {
   X,
   Phone,
   MessageSquare,
-  User
+  User,
+  Filter
 } from 'lucide-react'
 
 interface Customer {
   id: string
   phoneNumber: string
   name?: string
+  email?: string
   isActive: boolean
+  category?: string
+  tags?: string[]
+  notes?: string
+  totalOrders: number
+  totalSpent: number
+  lastOrderAt?: string
   createdAt: string
   _count?: {
     orders: number
     smsLogs: number
+    customerListMembers: number
   }
+  customerListMembers?: Array<{
+    customerList: {
+      id: string
+      name: string
+      color?: string
+    }
+  }>
 }
 
 export default function CustomersPage() {
@@ -38,6 +54,8 @@ export default function CustomersPage() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [smsMessage, setSmsMessage] = useState('')
   const [sendingSMS, setSendingSMS] = useState(false)
+  const [categoryFilter, setCategoryFilter] = useState<string>('all')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
 
   useEffect(() => {
     fetchCustomers()
@@ -54,27 +72,68 @@ export default function CustomersPage() {
         setCustomers([
           {
             id: 'demo-1',
-            phoneNumber: '+1234567890',
+            phoneNumber: '+14705078812',
             name: 'John Smith',
+            email: 'john@example.com',
             isActive: true,
-            createdAt: new Date().toISOString(),
-            _count: { orders: 5, smsLogs: 12 }
+            category: 'VIP',
+            tags: ['VIP', 'Regular', 'Lunch'],
+            notes: 'Frequent lunch orders, prefers chicken dishes',
+            totalOrders: 15,
+            totalSpent: 24750, // $247.50 in cents
+            lastOrderAt: new Date(Date.now() - 86400000).toISOString(), // Yesterday
+            createdAt: new Date(Date.now() - 30 * 86400000).toISOString(), // 30 days ago
+            _count: { orders: 15, smsLogs: 32, customerListMembers: 2 },
+            customerListMembers: [
+              { customerList: { id: 'list-1', name: 'VIP Customers', color: '#8B5CF6' } },
+              { customerList: { id: 'list-2', name: 'Lunch Regulars', color: '#10B981' } }
+            ]
           },
           {
             id: 'demo-2',
-            phoneNumber: '+1234567891',
+            phoneNumber: '+16787494736',
             name: 'Sarah Johnson',
+            email: 'sarah@example.com',
             isActive: true,
-            createdAt: new Date().toISOString(),
-            _count: { orders: 3, smsLogs: 8 }
+            category: 'Regular',
+            tags: ['Regular', 'Weekend'],
+            notes: 'Weekend orders, likes desserts',
+            totalOrders: 8,
+            totalSpent: 12400, // $124.00 in cents
+            lastOrderAt: new Date(Date.now() - 3 * 86400000).toISOString(), // 3 days ago
+            createdAt: new Date(Date.now() - 45 * 86400000).toISOString(), // 45 days ago
+            _count: { orders: 8, smsLogs: 18, customerListMembers: 1 },
+            customerListMembers: [
+              { customerList: { id: 'list-3', name: 'Weekend Orders', color: '#F59E0B' } }
+            ]
           },
           {
             id: 'demo-3',
-            phoneNumber: '+1234567892',
+            phoneNumber: '+14707260747',
+            name: 'Mike Chen',
+            isActive: true,
+            category: 'New',
+            tags: ['New', 'Pizza'],
+            totalOrders: 2,
+            totalSpent: 3200, // $32.00 in cents
+            lastOrderAt: new Date(Date.now() - 7 * 86400000).toISOString(), // 1 week ago
+            createdAt: new Date(Date.now() - 10 * 86400000).toISOString(), // 10 days ago
+            _count: { orders: 2, smsLogs: 5, customerListMembers: 0 },
+            customerListMembers: []
+          },
+          {
+            id: 'demo-4',
+            phoneNumber: '+14041234567',
             name: undefined,
             isActive: false,
-            createdAt: new Date().toISOString(),
-            _count: { orders: 0, smsLogs: 2 }
+            category: 'Occasional',
+            tags: ['Inactive'],
+            totalOrders: 1,
+            totalSpent: 1599, // $15.99 in cents
+            lastOrderAt: new Date(Date.now() - 60 * 86400000).toISOString(), // 2 months ago
+            createdAt: new Date(Date.now() - 90 * 86400000).toISOString(), // 3 months ago
+            _count: { orders: 1, smsLogs: 3, customerListMembers: 0 },
+            customerListMembers: []
           }
         ])
       }
@@ -359,14 +418,63 @@ export default function CustomersPage() {
               <div className="ml-5 w-0 flex-1">
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">
-                    With Names
+                    VIP Customers
                   </dt>
                   <dd className="text-lg font-medium text-gray-900">
-                    {customers.filter(c => c.name).length}
+                    {customers.filter(c => c.category === 'VIP').length}
                   </dd>
                 </dl>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <div className="flex items-center space-x-4">
+          <Filter className="h-5 w-5 text-gray-400" />
+          <div className="flex items-center space-x-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Category
+              </label>
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="all">All Categories</option>
+                <option value="VIP">VIP</option>
+                <option value="Frequent">Frequent</option>
+                <option value="Regular">Regular</option>
+                <option value="Occasional">Occasional</option>
+                <option value="New">New</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Status
+              </label>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCategoryFilter('all')
+                setStatusFilter('all')
+              }}
+            >
+              Clear Filters
+            </Button>
           </div>
         </div>
       </div>
@@ -382,16 +490,19 @@ export default function CustomersPage() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Phone Number
+                    Customer Info
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Name
+                    Category & Tags
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Orders
+                    Orders & Spent
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Lists
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
@@ -399,40 +510,63 @@ export default function CustomersPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {customers.map((customer) => (
+                {customers
+                  .filter(customer => {
+                    if (categoryFilter !== 'all' && customer.category !== categoryFilter) {
+                      return false
+                    }
+                    if (statusFilter === 'active' && !customer.isActive) {
+                      return false
+                    }
+                    if (statusFilter === 'inactive' && customer.isActive) {
+                      return false
+                    }
+                    return true
+                  })
+                  .map((customer) => (
                   <tr key={customer.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {customer.phoneNumber}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {editingId === customer.id ? (
-                        <div className="flex items-center space-x-2">
-                          <Input
-                            value={editName}
-                            onChange={(e) => setEditName(e.target.value)}
-                            className="w-32"
-                            placeholder="Enter name"
-                          />
-                          <Button
-                            size="sm"
-                            onClick={() => handleEditName(customer.id, editName)}
-                          >
-                            <Check className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setEditingId(null)
-                              setEditName('')
-                            }}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
+                    {/* Customer Info */}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-start space-x-3">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">
+                            {customer.name || 'No name set'}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {customer.phoneNumber}
+                          </div>
+                          {customer.email && (
+                            <div className="text-xs text-gray-400">
+                              {customer.email}
+                            </div>
+                          )}
                         </div>
-                      ) : (
-                        <div className="flex items-center space-x-2">
-                          <span>{customer.name || 'No name set'}</span>
+                        {editingId === customer.id ? (
+                          <div className="flex items-center space-x-1 ml-2">
+                            <Input
+                              value={editName}
+                              onChange={(e) => setEditName(e.target.value)}
+                              className="w-24 text-xs"
+                              placeholder="Name"
+                            />
+                            <Button
+                              size="sm"
+                              onClick={() => handleEditName(customer.id, editName)}
+                            >
+                              <Check className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setEditingId(null)
+                                setEditName('')
+                              }}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ) : (
                           <Button
                             size="sm"
                             variant="ghost"
@@ -441,11 +575,47 @@ export default function CustomersPage() {
                               setEditName(customer.name || '')
                             }}
                           >
-                            <Edit2 className="h-4 w-4" />
+                            <Edit2 className="h-3 w-3" />
                           </Button>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </td>
+
+                    {/* Category & Tags */}
+                    <td className="px-6 py-4">
+                      <div className="space-y-1">
+                        {customer.category && (
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            customer.category === 'VIP' ? 'bg-purple-100 text-purple-800' :
+                            customer.category === 'Frequent' ? 'bg-blue-100 text-blue-800' :
+                            customer.category === 'Regular' ? 'bg-green-100 text-green-800' :
+                            customer.category === 'Occasional' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {customer.category}
+                          </span>
+                        )}
+                        {customer.tags && customer.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {customer.tags.slice(0, 3).map((tag, index) => (
+                              <span
+                                key={index}
+                                className="inline-flex px-1.5 py-0.5 text-xs bg-gray-100 text-gray-700 rounded"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                            {customer.tags.length > 3 && (
+                              <span className="text-xs text-gray-500">
+                                +{customer.tags.length - 3} more
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Status */}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <button
                         onClick={() => toggleCustomerStatus(customer.id, customer.isActive)}
@@ -458,9 +628,54 @@ export default function CustomersPage() {
                         {customer.isActive ? 'Active' : 'Inactive'}
                       </button>
                     </td>
+
+                    {/* Orders & Spent */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {customer._count?.orders || 0} orders
+                      <div>
+                        <div className="font-medium">
+                          {customer.totalOrders || customer._count?.orders || 0} orders
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          ${((customer.totalSpent || 0) / 100).toFixed(2)} spent
+                        </div>
+                        {customer.lastOrderAt && (
+                          <div className="text-xs text-gray-400">
+                            Last: {new Date(customer.lastOrderAt).toLocaleDateString()}
+                          </div>
+                        )}
+                      </div>
                     </td>
+
+                    {/* Customer Lists */}
+                    <td className="px-6 py-4">
+                      <div className="flex flex-wrap gap-1">
+                        {customer.customerListMembers && customer.customerListMembers.length > 0 ? (
+                          <>
+                            {customer.customerListMembers.slice(0, 2).map((member, index) => (
+                              <span
+                                key={index}
+                                className="inline-flex px-2 py-1 text-xs rounded-full"
+                                style={{
+                                  backgroundColor: member.customerList.color || '#3B82F6',
+                                  color: 'white'
+                                }}
+                              >
+                                {member.customerList.name}
+                              </span>
+                            ))}
+                            {customer.customerListMembers.length > 2 && (
+                              <span className="text-xs text-gray-500">
+                                +{customer.customerListMembers.length - 2} more
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-xs text-gray-400">No lists</span>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Actions */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       <div className="flex space-x-2">
                         <Button
@@ -486,6 +701,32 @@ export default function CustomersPage() {
           </div>
         </div>
       </div>
+
+      {/* Empty State */}
+      {customers
+        .filter(customer => {
+          if (categoryFilter !== 'all' && customer.category !== categoryFilter) {
+            return false
+          }
+          if (statusFilter === 'active' && !customer.isActive) {
+            return false
+          }
+          if (statusFilter === 'inactive' && customer.isActive) {
+            return false
+          }
+          return true
+        }).length === 0 && (
+        <div className="bg-white shadow rounded-lg p-8 text-center">
+          <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No customers found</h3>
+          <p className="text-gray-500">
+            {categoryFilter !== 'all' || statusFilter !== 'all'
+              ? 'Try adjusting your filters to see more results.'
+              : 'Get started by adding your first customer.'
+            }
+          </p>
+        </div>
+      )}
 
       {/* Send SMS Modal */}
       {showSMSModal && selectedCustomer && (
