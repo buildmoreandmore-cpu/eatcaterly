@@ -202,8 +202,13 @@ export default function CustomersPage() {
         phoneNumber: newPhoneNumber.trim(),
         name: newName.trim() || undefined,
         isActive: true,
+        category: 'New',
+        tags: ['New'],
+        totalOrders: 0,
+        totalSpent: 0,
         createdAt: new Date().toISOString(),
-        _count: { orders: 0, smsLogs: 0 }
+        _count: { orders: 0, smsLogs: 0, customerListMembers: 0 },
+        customerListMembers: []
       }
       setCustomers([newCustomer, ...customers])
       setNewPhoneNumber('')
