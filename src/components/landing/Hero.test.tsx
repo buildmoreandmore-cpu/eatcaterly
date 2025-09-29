@@ -4,7 +4,7 @@ import Hero from './Hero'
 describe('Hero', () => {
   it('renders the main headline', () => {
     render(<Hero />)
-    expect(screen.getByText('Food for every occasion.')).toBeInTheDocument()
+    expect(screen.getByText('Catering.')).toBeInTheDocument()
     expect(screen.getByText('Made simple.')).toBeInTheDocument()
   })
 
@@ -45,5 +45,14 @@ describe('Hero', () => {
     render(<Hero />)
     expect(screen.getByText('Free 14-day trial')).toBeInTheDocument()
     expect(screen.getByText('No credit card required')).toBeInTheDocument()
+  })
+
+  it('renders the menu card with larger size classes', () => {
+    const { container } = render(<Hero />)
+    const menuCard = container.querySelector('[data-testid="menu-card"]')
+
+    // Test will fail initially until we make the card bigger
+    expect(menuCard).toHaveClass('max-w-xl') // Expecting xl instead of lg
+    expect(menuCard).toHaveClass('p-12') // Expecting larger padding
   })
 })

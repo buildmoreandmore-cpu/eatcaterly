@@ -52,39 +52,42 @@ export default function Hero() {
 
           {/* Right column - Menu preview card */}
           <div className="lg:justify-self-end">
-            <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-10 max-w-lg mx-auto">
-              <div className="mb-8">
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">Today's Menu</h3>
-                <span className="text-base text-gray-500">Chef Maria's Kitchen</span>
+            <div
+              data-testid="menu-card"
+              className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-12 max-w-xl mx-auto"
+            >
+              <div className="mb-10">
+                <h3 className="text-2xl font-semibold text-gray-900 mb-3">Today's Menu</h3>
+                <span className="text-lg text-gray-500">Chef Maria's Kitchen</span>
               </div>
 
-              <div className="space-y-6">
+              <div className="space-y-8">
                 <div className="flex justify-between items-center">
                   <div>
-                    <h4 className="text-lg font-medium text-gray-900">Grilled Salmon</h4>
-                    <p className="text-base text-gray-500">With lemon herbs</p>
+                    <h4 className="text-xl font-medium text-gray-900">Grilled Salmon</h4>
+                    <p className="text-lg text-gray-500">With lemon herbs</p>
                   </div>
-                  <span className="text-xl font-semibold text-orange-500">$24</span>
+                  <span className="text-2xl font-semibold text-orange-500">$24</span>
                 </div>
 
                 <div className="flex justify-between items-center">
                   <div>
-                    <h4 className="text-lg font-medium text-gray-900">Pasta Primavera</h4>
-                    <p className="text-base text-gray-500">Fresh vegetables</p>
+                    <h4 className="text-xl font-medium text-gray-900">Pasta Primavera</h4>
+                    <p className="text-lg text-gray-500">Fresh vegetables</p>
                   </div>
-                  <span className="text-xl font-semibold text-orange-500">$18</span>
+                  <span className="text-2xl font-semibold text-orange-500">$18</span>
                 </div>
 
                 <div className="flex justify-between items-center">
                   <div>
-                    <h4 className="text-lg font-medium text-gray-900">Caesar Salad</h4>
-                    <p className="text-base text-gray-500">Crispy romaine</p>
+                    <h4 className="text-xl font-medium text-gray-900">Caesar Salad</h4>
+                    <p className="text-lg text-gray-500">Crispy romaine</p>
                   </div>
-                  <span className="text-xl font-semibold text-orange-500">$12</span>
+                  <span className="text-2xl font-semibold text-orange-500">$12</span>
                 </div>
               </div>
 
-              <button className="w-full bg-orange-500 text-white py-4 rounded-lg font-semibold text-lg mt-8 hover:bg-orange-600 transition-colors">
+              <button className="w-full bg-orange-500 text-white py-5 rounded-lg font-semibold text-xl mt-10 hover:bg-orange-600 transition-colors">
                 Order Now
               </button>
             </div>
