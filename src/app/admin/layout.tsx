@@ -1,8 +1,10 @@
 'use client'
 
-import { ReactNode, useEffect } from 'react'
+import { ReactNode } from 'react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
+import { useAuth, UserButton } from '@clerk/nextjs'
+import AuthWrapper, { useAuthState } from '@/components/auth/AuthWrapper'
 import {
   Home,
   Users,
@@ -17,21 +19,36 @@ interface AdminLayoutProps {
   children: ReactNode
 }
 
-export default function AdminLayout({ children }: AdminLayoutProps) {
+function AdminLayoutContent({ children }: AdminLayoutProps) {
   const pathname = usePathname()
-  const router = useRouter()
+  const hasClerkKeys = typeof window !== 'undefined' &&
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY !== 'pk_test_dummy_clerk_publishable'
 
-  // Check authentication on mount
-  useEffect(() => {
-    const isAuthenticated = localStorage.getItem('isAuthenticated')
-    if (!isAuthenticated) {
-      router.push('/login')
+  // Always call hooks but handle the result conditionally
+  let clerkSignOut
+  try {
+    const authResult = useAuth()
+    clerkSignOut = hasClerkKeys ? authResult.signOut : async () => {}
+  } catch {
+    clerkSignOut = async () => {}
+  }
+
+  const { user, isDemoMode } = useAuthState()
+
+  const handleLogout = async () => {
+    if (isDemoMode) {
+      // Demo mode logout
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('isAuthenticated')
+        localStorage.removeItem('authMode')
+      }
+      window.location.href = '/'
+    } else {
+      // Clerk logout
+      await clerkSignOut()
+      window.location.href = '/'
     }
-  }, [router])
-
-  const handleLogout = () => {
-    localStorage.removeItem('isAuthenticated')
-    router.push('/')
   }
 
   const navigation = [
@@ -92,12 +109,22 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         <header className="bg-white shadow-sm border-b border-gray-200">
           <div className="flex h-16 items-center justify-between px-6">
             <h2 className="text-lg font-semibold text-gray-900">
-              SMS Food Delivery Admin
+              EatCaterly Admin {isDemoMode && <span className="text-yellow-600">(Demo)</span>}
             </h2>
             <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-500">
-                {new Date().toLocaleDateString()}
-              </span>
+              {!isDemoMode && user && (
+                <div className="flex items-center space-x-3">
+                  <span className="text-sm text-gray-600">
+                    {user.emailAddresses[0]?.emailAddress}
+                  </span>
+                  <UserButton afterSignOutUrl="/" />
+                </div>
+              )}
+              {isDemoMode && (
+                <span className="text-sm text-gray-500">
+                  Demo User - {new Date().toLocaleDateString()}
+                </span>
+              )}
             </div>
           </div>
         </header>
@@ -108,5 +135,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         </main>
       </div>
     </div>
+  )
+}
+
+export default function AdminLayout({ children }: AdminLayoutProps) {
+  return (
+    <AuthWrapper>
+      <AdminLayoutContent>{children}</AdminLayoutContent>
+    </AuthWrapper>
   )
 }
