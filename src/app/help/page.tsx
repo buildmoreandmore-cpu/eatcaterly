@@ -272,7 +272,7 @@ export default function HelpPage() {
               Contact Support
             </a>
             <a
-              href="mailto:support@eatcaterly.com"
+              href="mailto:eatcaterly@gmail.com"
               className="border border-white text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-white hover:text-blue-600 transition-colors"
             >
               Email Us

@@ -36,8 +36,8 @@ export default function ContactPage() {
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-3">Sales</h3>
               <p className="text-gray-600 mb-4">Ready to get started? Let's discuss how EatCaterly can help your food business.</p>
-              <a href="mailto:sales@eatcaterly.com" className="text-green-600 font-medium hover:text-green-700">
-                sales@eatcaterly.com
+              <a href="mailto:eatcaterly@gmail.com" className="text-green-600 font-medium hover:text-green-700">
+                eatcaterly@gmail.com
               </a>
               <br />
               <a href="tel:+1-555-0100" className="text-green-600 font-medium hover:text-green-700">
@@ -54,8 +54,8 @@ export default function ContactPage() {
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-3">Support</h3>
               <p className="text-gray-600 mb-4">Need help with your account or have technical questions? We're here for you.</p>
-              <a href="mailto:support@eatcaterly.com" className="text-blue-600 font-medium hover:text-blue-700">
-                support@eatcaterly.com
+              <a href="mailto:eatcaterly@gmail.com" className="text-blue-600 font-medium hover:text-blue-700">
+                eatcaterly@gmail.com
               </a>
               <br />
               <a href="tel:+1-555-0200" className="text-blue-600 font-medium hover:text-blue-700">
@@ -72,8 +72,8 @@ export default function ContactPage() {
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-3">General</h3>
               <p className="text-gray-600 mb-4">Have general questions, feedback, or partnership inquiries? Reach out anytime.</p>
-              <a href="mailto:hello@eatcaterly.com" className="text-orange-600 font-medium hover:text-orange-700">
-                hello@eatcaterly.com
+              <a href="mailto:eatcaterly@gmail.com" className="text-orange-600 font-medium hover:text-orange-700">
+                eatcaterly@gmail.com
               </a>
               <br />
               <a href="tel:+1-555-0300" className="text-orange-600 font-medium hover:text-orange-700">

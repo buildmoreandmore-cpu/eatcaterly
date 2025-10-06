@@ -174,7 +174,7 @@ export default function PrivacyPage() {
                 <li>Objection: Object to certain types of data processing</li>
               </ul>
               <p className="text-gray-600 leading-relaxed mt-4">
-                To exercise these rights, please contact us at privacy@eatcaterly.com.
+                To exercise these rights, please contact us at eatcaterly@gmail.com.
               </p>
             </div>
 
@@ -233,7 +233,7 @@ export default function PrivacyPage() {
                 If you have questions about this Privacy Policy or our data practices, please contact us:
               </p>
               <div className="bg-gray-50 rounded-lg p-6">
-                <p className="text-gray-700 mb-2"><strong>Email:</strong> privacy@eatcaterly.com</p>
+                <p className="text-gray-700 mb-2"><strong>Email:</strong> eatcaterly@gmail.com</p>
                 <p className="text-gray-700 mb-2"><strong>Address:</strong> EatCaterly Privacy Team</p>
                 <p className="text-gray-700 mb-2">123 Food Innovation Drive</p>
                 <p className="text-gray-700">Atlanta, GA 30309, United States</p>
