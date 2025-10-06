@@ -1,6 +1,7 @@
 import Header from '../../components/landing/Header'
 import A2PHero from '../../components/a2p/A2PHero'
 import ComplianceRequirements from '../../components/a2p/ComplianceRequirements'
+import OptInMethods from '../../components/a2p/OptInMethods'
 import RegistrationProcess from '../../components/a2p/RegistrationProcess'
 import ComplianceBenefits from '../../components/a2p/ComplianceBenefits'
 import A2PFAQ from '../../components/a2p/A2PFAQ'
@@ -17,6 +18,7 @@ export default function A2PPage() {
       <Header />
       <A2PHero />
       <ComplianceRequirements />
+      <OptInMethods />
       <RegistrationProcess />
       <ComplianceBenefits />
       <A2PFAQ />
