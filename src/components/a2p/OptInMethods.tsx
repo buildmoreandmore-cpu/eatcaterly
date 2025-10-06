@@ -182,6 +182,59 @@ export default function OptInMethods() {
           </p>
         </div>
 
+        {/* Download Transcript Section */}
+        <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-2xl p-8 mb-12">
+          <div className="max-w-3xl mx-auto text-center">
+            <div className="inline-block bg-green-500 text-white px-4 py-2 rounded-full font-semibold text-sm mb-4">
+              📄 FREE DOWNLOAD
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-4">
+              Complete SMS Opt-In Transcript for A2P Registration
+            </h3>
+            <p className="text-gray-700 mb-6">
+              Download our comprehensive transcript showing exactly how your food business staff should collect SMS consent from customers. Includes 8 real-world scenarios for phone orders, in-person sales, catering events, and more.
+            </p>
+            <div className="bg-white rounded-lg p-6 mb-6 text-left">
+              <h4 className="font-semibold text-gray-900 mb-3">Included in this document:</h4>
+              <ul className="space-y-2 text-sm text-gray-700">
+                <li className="flex items-start">
+                  <span className="text-green-600 mr-2">✓</span>
+                  <span>8 verbatim phone & in-person opt-in scripts</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-green-600 mr-2">✓</span>
+                  <span>Online form consent language templates</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-green-600 mr-2">✓</span>
+                  <span>TCPA compliance checklist for staff training</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-green-600 mr-2">✓</span>
+                  <span>Documentation requirements for carrier registration</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-green-600 mr-2">✓</span>
+                  <span>Automated confirmation message examples</span>
+                </li>
+              </ul>
+            </div>
+            <a
+              href="/SMS-Opt-In-Transcript.md"
+              download
+              className="inline-flex items-center bg-green-600 text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-green-700 transition-colors"
+            >
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Download Transcript (Free)
+            </a>
+            <p className="text-gray-600 text-sm mt-4">
+              Use this transcript for your A2P registration with carriers
+            </p>
+          </div>
+        </div>
+
         {/* Bottom CTA */}
         <div className="text-center mt-12">
           <p className="text-gray-600 mb-4">
