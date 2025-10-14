@@ -41,10 +41,17 @@ describe('FAQ', () => {
 
   it('shows expanded answer for support question', () => {
     render(<FAQ />)
-    const supportQuestion = screen.getByText('What kind of support do you provide?')
-
-    fireEvent.click(supportQuestion)
+    // Support question (index 5) is open by default, so answer should be visible immediately
     expect(screen.getByText(/We offer email support for all users/)).toBeInTheDocument()
     expect(screen.getByText(/priority support for Pro plan customers/)).toBeInTheDocument()
+  })
+
+  it('shows correct customer limits for Starter and Pro plans', () => {
+    render(<FAQ />)
+    const customerLimitQuestion = screen.getByText('Is there a limit on the number of customers I can reach?')
+
+    fireEvent.click(customerLimitQuestion)
+    expect(screen.getByText(/Our Starter plan supports up to 100 customers/)).toBeInTheDocument()
+    expect(screen.getByText(/Pro plan offers unlimited customers/)).toBeInTheDocument()
   })
 })

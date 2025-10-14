@@ -4,9 +4,10 @@ export default function Pricing() {
   const plans = [
     {
       name: 'Starter',
-      price: 29,
+      price: 65,
       description: 'Perfect for small food businesses and food trucks',
       features: [
+        'A2P-compliant phone number included',
         'Up to 100 customers',
         'Daily menu updates',
         'SMS ordering',
@@ -18,9 +19,10 @@ export default function Pricing() {
     },
     {
       name: 'Pro',
-      price: 79,
+      price: 125,
       description: 'Ideal for restaurants and catering businesses',
       features: [
+        'A2P-compliant phone number included',
         'Unlimited customers',
         'Advanced menu management',
         'SMS + email marketing',
