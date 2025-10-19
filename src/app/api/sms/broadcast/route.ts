@@ -1,9 +1,30 @@
 import { NextResponse } from 'next/server'
+import { auth } from '@clerk/nextjs/server'
 import { broadcastMenu } from '@/lib/sms'
+
+// Admin user ID from middleware
+const ADMIN_USER_ID = 'user_34AyHh3kVYM0kr5LBYkf1phUrLu'
 
 export async function POST() {
   try {
-    // TODO: Add authentication middleware to protect this endpoint
+    // Authentication check
+    const { userId } = await auth()
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'Unauthorized. Please sign in.' },
+        { status: 401 }
+      )
+    }
+
+    // Authorization check - admin only
+    if (userId !== ADMIN_USER_ID) {
+      return NextResponse.json(
+        { error: 'Forbidden. Admin access required.' },
+        { status: 403 }
+      )
+    }
+
     const result = await broadcastMenu()
 
     return NextResponse.json({

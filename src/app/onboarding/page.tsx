@@ -25,14 +25,19 @@ export default function OnboardingPage() {
 
   const [formData, setFormData] = useState({
     businessName: '',
-    contactName: user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : '',
-    contactEmail: user?.emailAddresses[0]?.emailAddress || '',
+    contactName: user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : 'Test User',
+    contactEmail: user?.emailAddresses[0]?.emailAddress || 'test@example.com',
     zipCode: '',
+    promoCode: '',
   })
 
   const [isLoading, setIsLoading] = useState(false)
   const [result, setResult] = useState<OnboardingResult | null>(null)
   const [error, setError] = useState<string>('')
+  const [showPromoField, setShowPromoField] = useState(false)
+  const [validatingPromo, setValidatingPromo] = useState(false)
+  const [promoValid, setPromoValid] = useState(false)
+  const [promoData, setPromoData] = useState<any>(null)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -41,6 +46,50 @@ export default function OnboardingPage() {
       [name]: value,
     }))
     setError('')
+
+    // Reset promo validation if promo code changes
+    if (name === 'promoCode') {
+      setPromoValid(false)
+      setPromoData(null)
+    }
+  }
+
+  const validatePromoCode = async () => {
+    if (!formData.promoCode.trim()) {
+      setError('Please enter a promo code')
+      return
+    }
+
+    setValidatingPromo(true)
+    setError('')
+
+    try {
+      const response = await fetch('/api/promo-codes/validate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ code: formData.promoCode }),
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        setPromoValid(true)
+        setPromoData(data.promoCode)
+        // Success message will be shown in UI
+      } else {
+        setError(data.error || 'Invalid promo code')
+        setPromoValid(false)
+        setPromoData(null)
+      }
+    } catch (err) {
+      setError('Failed to validate promo code')
+      setPromoValid(false)
+      setPromoData(null)
+    } finally {
+      setValidatingPromo(false)
+    }
   }
 
   const validateForm = () => {
@@ -101,16 +150,25 @@ export default function OnboardingPage() {
   }
 
   const handleContinue = () => {
-    router.push('/onboarding/plan')
+    // Pass promo code data to plan selection page
+    const params = new URLSearchParams()
+    if (promoValid && promoData) {
+      params.set('promoCode', formData.promoCode)
+      params.set('promoId', promoData.id)
+      router.push(`/onboarding/plan?${params.toString()}`)
+    } else {
+      router.push('/onboarding/plan')
+    }
   }
 
-  if (!isLoaded) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg text-gray-600">Loading...</div>
-      </div>
-    )
-  }
+  // Skip loading check for testing without authentication
+  // if (!isLoaded) {
+  //   return (
+  //     <div className="min-h-screen flex items-center justify-center">
+  //       <div className="text-lg text-gray-600">Loading...</div>
+  //     </div>
+  //   )
+  // }
 
   // Success state - show assigned phone number
   if (result?.success) {
@@ -270,6 +328,65 @@ export default function OnboardingPage() {
               <p className="text-xs text-gray-500 mt-1">
                 We serve the Atlanta metro area (404, 470, 678, 770)
               </p>
+            </div>
+
+            {/* Promo Code Section */}
+            <div className="border-t border-gray-200 pt-6">
+              <button
+                type="button"
+                onClick={() => setShowPromoField(!showPromoField)}
+                className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center"
+              >
+                {showPromoField ? '- Hide' : '+ Have a promo code?'}
+              </button>
+
+              {showPromoField && (
+                <div className="mt-4">
+                  <label htmlFor="promoCode" className="block text-sm font-medium text-gray-700 mb-2">
+                    Promo Code
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      id="promoCode"
+                      name="promoCode"
+                      value={formData.promoCode}
+                      onChange={handleChange}
+                      placeholder="Enter code"
+                      className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono uppercase"
+                    />
+                    <button
+                      type="button"
+                      onClick={validatePromoCode}
+                      disabled={validatingPromo || !formData.promoCode.trim()}
+                      className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {validatingPromo ? 'Checking...' : 'Apply'}
+                    </button>
+                  </div>
+
+                  {/* Promo Valid Message */}
+                  {promoValid && promoData && (
+                    <div className="mt-3 p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-start">
+                        <svg className="w-5 h-5 text-green-500 mt-0.5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-green-800">Promo code applied!</p>
+                          <p className="text-xs text-green-700 mt-1">
+                            {promoData.discountType === 'PERCENTAGE'
+                              ? `${promoData.discountValue}% discount`
+                              : `$${(promoData.discountValue / 100).toFixed(2)} off`}
+                            {promoData.freePhoneNumber && ' + Free phone number'}
+                            {promoData.freeSubscription && ' + Free subscription'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Error Message */}

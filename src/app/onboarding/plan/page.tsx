@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useUser } from '@clerk/nextjs'
 
 type PlanType = 'starter' | 'pro' | null
@@ -17,10 +17,57 @@ interface Plan {
 
 export default function PlanSelectionPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { user } = useUser()
   const [selectedPlan, setSelectedPlan] = useState<PlanType>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string>('')
+  const [businessId, setBusinessId] = useState<string | null>(null)
+  const [promoCode, setPromoCode] = useState<string | null>(null)
+  const [promoData, setPromoData] = useState<any>(null)
+  const [loadingPromo, setLoadingPromo] = useState(false)
+
+  useEffect(() => {
+    const id = searchParams.get('businessId')
+    if (id) {
+      setBusinessId(id)
+    }
+
+    // Load and validate promo code from URL
+    const code = searchParams.get('promoCode')
+    const promoId = searchParams.get('promoId')
+    if (code && promoId) {
+      setPromoCode(code)
+      validatePromoCode(code)
+    }
+  }, [searchParams])
+
+  const validatePromoCode = async (code: string) => {
+    setLoadingPromo(true)
+    try {
+      const response = await fetch('/api/promo-codes/validate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ code }),
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        setPromoData(data.promoCode)
+      } else {
+        setPromoCode(null)
+        setPromoData(null)
+      }
+    } catch (err) {
+      setPromoCode(null)
+      setPromoData(null)
+    } finally {
+      setLoadingPromo(false)
+    }
+  }
 
   const plans: Plan[] = [
     {
@@ -59,6 +106,19 @@ export default function PlanSelectionPage() {
     },
   ]
 
+  const calculateDiscountedPrice = (originalPrice: number): number => {
+    if (!promoData || !promoData.freeSubscription) return originalPrice
+
+    if (promoData.discountType === 'PERCENTAGE') {
+      const discount = (originalPrice * promoData.discountValue) / 100
+      return Math.max(0, originalPrice - discount)
+    } else {
+      // FIXED_AMOUNT (in cents, so divide by 100)
+      const discountAmount = promoData.discountValue / 100
+      return Math.max(0, originalPrice - discountAmount)
+    }
+  }
+
   const handleSelectPlan = (planId: PlanType) => {
     setSelectedPlan(planId)
     setError('')
@@ -74,27 +134,60 @@ export default function PlanSelectionPage() {
     setError('')
 
     try {
-      // Create Stripe checkout session
-      const response = await fetch('/api/create-checkout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          plan: selectedPlan,
-          userId: user?.id,
-          email: user?.emailAddresses[0]?.emailAddress,
-        }),
-      })
+      const selectedPlanData = plans.find(p => p.id === selectedPlan)
+      const discountedPrice = calculateDiscountedPrice(selectedPlanData?.price || 0)
 
-      const data = await response.json()
+      // If 100% discount, skip Stripe and create business directly
+      if (discountedPrice === 0 && promoData) {
+        const response = await fetch('/api/onboarding/complete-free', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            plan: selectedPlan,
+            promoCodeId: promoData.id,
+            promoCode: promoCode,
+            businessId: businessId || undefined,
+            email: user?.emailAddresses[0]?.emailAddress || 'test@example.com',
+          }),
+        })
 
-      if (data.success && data.checkoutUrl) {
-        // Redirect to Stripe checkout
-        window.location.href = data.checkoutUrl
+        const data = await response.json()
+
+        if (data.success) {
+          // Redirect to success page
+          router.push('/onboarding/success')
+        } else {
+          setError(data.error || 'Failed to complete signup')
+          setIsLoading(false)
+        }
       } else {
-        setError(data.error || 'Failed to create checkout session')
-        setIsLoading(false)
+        // Create Stripe checkout session (with or without discount)
+        const endpoint = businessId ? '/api/create-checkout' : '/api/test-checkout'
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            plan: selectedPlan,
+            businessId: businessId || undefined,
+            email: user?.emailAddresses[0]?.emailAddress || 'test@example.com',
+            promoCodeId: promoData?.id,
+            promoCode: promoCode,
+          }),
+        })
+
+        const data = await response.json()
+
+        if (data.success && data.checkoutUrl) {
+          // Redirect to Stripe checkout
+          window.location.href = data.checkoutUrl
+        } else {
+          setError(data.error || 'Failed to create checkout session')
+          setIsLoading(false)
+        }
       }
     } catch (err) {
       setError('Network error. Please try again.')
@@ -148,8 +241,25 @@ export default function PlanSelectionPage() {
               <div className="text-center mb-6">
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">{plan.name}</h3>
                 <div className="mb-4">
-                  <span className="text-5xl font-bold text-gray-900">${plan.price}</span>
-                  <span className="text-gray-500 ml-2">per month</span>
+                  {promoData && promoData.freeSubscription ? (
+                    <div>
+                      <div className="text-gray-400 line-through text-2xl">${plan.price}</div>
+                      <div className="text-5xl font-bold text-green-600">
+                        ${calculateDiscountedPrice(plan.price)}
+                      </div>
+                      <span className="text-gray-500 ml-2">per month</span>
+                      {calculateDiscountedPrice(plan.price) === 0 && (
+                        <div className="mt-2 inline-block px-3 py-1 bg-green-100 text-green-800 text-sm font-semibold rounded-full">
+                          FREE with {promoCode}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div>
+                      <span className="text-5xl font-bold text-gray-900">${plan.price}</span>
+                      <span className="text-gray-500 ml-2">per month</span>
+                    </div>
+                  )}
                 </div>
                 <p className="text-gray-600">{plan.description}</p>
               </div>

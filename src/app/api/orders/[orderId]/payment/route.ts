@@ -2,6 +2,34 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createPaymentLink } from '@/lib/stripe'
 import { sendSMS } from '@/lib/sms'
 import { prisma } from '@/lib/db'
+import { rateLimitPayment, getIdentifier } from '@/lib/rate-limit'
+
+/**
+ * Add security headers to response
+ */
+function addSecurityHeaders(response: NextResponse, rateLimit?: {
+  limit?: number
+  remaining?: number
+  reset?: number
+}) {
+  response.headers.set('X-Content-Type-Options', 'nosniff')
+  response.headers.set('X-Frame-Options', 'DENY')
+  response.headers.set('X-XSS-Protection', '1; mode=block')
+
+  if (rateLimit) {
+    if (rateLimit.limit) {
+      response.headers.set('X-RateLimit-Limit', rateLimit.limit.toString())
+    }
+    if (rateLimit.remaining !== undefined) {
+      response.headers.set('X-RateLimit-Remaining', rateLimit.remaining.toString())
+    }
+    if (rateLimit.reset) {
+      response.headers.set('X-RateLimit-Reset', rateLimit.reset.toString())
+    }
+  }
+
+  return response
+}
 
 export async function POST(
   request: NextRequest,
@@ -9,6 +37,36 @@ export async function POST(
 ) {
   try {
     const { orderId } = await params
+
+    // Validate order ID
+    if (!orderId) {
+      const response = NextResponse.json(
+        { error: 'Order ID is required' },
+        { status: 400 }
+      )
+      return addSecurityHeaders(response)
+    }
+
+    // Apply rate limiting
+    const identifier = getIdentifier(request)
+    const rateLimitResult = await rateLimitPayment(identifier)
+
+    if (!rateLimitResult.success) {
+      const retryAfter = rateLimitResult.reset
+        ? Math.ceil((rateLimitResult.reset - Date.now()) / 1000)
+        : 60
+
+      const response = NextResponse.json(
+        {
+          error: 'Too many requests. Please try again later.',
+          retryAfter,
+        },
+        { status: 429 }
+      )
+
+      response.headers.set('Retry-After', retryAfter.toString())
+      return addSecurityHeaders(response, rateLimitResult)
+    }
 
     // Create payment link
     const paymentResult = await createPaymentLink(orderId)
@@ -33,20 +91,29 @@ export async function POST(
       }
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       data: paymentResult,
       message: 'Payment link created and sent via SMS',
     })
+    return addSecurityHeaders(response, rateLimitResult)
   } catch (error: any) {
     console.error('Payment link creation error:', error)
-    return NextResponse.json(
+
+    // Don't expose internal error details
+    const errorMessage = error.message?.includes('Stripe account') ||
+                        error.message?.includes('onboarding')
+      ? error.message
+      : 'Failed to create payment link'
+
+    const response = NextResponse.json(
       {
         success: false,
-        error: error.message || 'Failed to create payment link'
+        error: errorMessage
       },
       { status: 500 }
     )
+    return addSecurityHeaders(response)
   }
 }
 
@@ -69,21 +136,24 @@ export async function GET(
     })
 
     if (!order) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         { error: 'Order not found' },
         { status: 404 }
       )
+      return addSecurityHeaders(response)
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       data: order,
     })
+    return addSecurityHeaders(response)
   } catch (error: any) {
     console.error('Order retrieval error:', error)
-    return NextResponse.json(
+    const response = NextResponse.json(
       { error: 'Failed to retrieve order' },
       { status: 500 }
     )
+    return addSecurityHeaders(response)
   }
 }

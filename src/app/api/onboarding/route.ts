@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { assignPhoneNumberForZipCode } from '@/lib/phone-number-assignment'
+import { getLocationForZipCode, getAreaCodeForZipCode } from '@/lib/phone-number-assignment'
+import { getAvailableNumber, assignNumber, addToInventory } from '@/lib/phone-inventory'
+import ezTexting from '@/lib/ez-texting'
 
 export async function POST(request: NextRequest) {
   try {
@@ -53,17 +55,61 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Assign phone number based on zip code
-    const assignment = await assignPhoneNumberForZipCode(zipCode)
+    // Get location and area code for zip code
+    const location = getLocationForZipCode(zipCode)
+    const areaCode = getAreaCodeForZipCode(zipCode)
 
-    if (!assignment.success) {
+    if (!areaCode) {
       return NextResponse.json(
         {
           success: false,
-          error: assignment.error
+          error: `Zip code ${zipCode} is not currently supported. We serve the Atlanta metro area.`
         },
         { status: 400 }
       )
+    }
+
+    // Smart number assignment: Check inventory first, then purchase if needed
+    let phoneNumber: string
+    let inventoryId: string | undefined
+
+    // 1. Try to get number from inventory (available or cooldown expired)
+    const inventoryResult = await getAvailableNumber(areaCode)
+
+    if (inventoryResult.success && inventoryResult.number) {
+      // Found number in inventory
+      phoneNumber = inventoryResult.number.phoneNumber
+      inventoryId = inventoryResult.number.id
+      console.log(`Using ${inventoryResult.source} number from inventory: ${phoneNumber}`)
+    } else {
+      // 2. No inventory number - purchase new one from EZTexting
+      console.log(`No inventory number available for area code ${areaCode}, purchasing new number...`)
+
+      const provisionResult = await ezTexting.provisionPhoneNumber(areaCode)
+
+      if (!provisionResult.success) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: provisionResult.error || 'Failed to provision phone number'
+          },
+          { status: 500 }
+        )
+      }
+
+      phoneNumber = provisionResult.phoneNumber!
+
+      // Add newly purchased number to inventory
+      const addResult = await addToInventory({
+        phoneNumber: provisionResult.phoneNumber!,
+        ezTextingNumberId: provisionResult.numberId!,
+        areaCode: provisionResult.areaCode!,
+      })
+
+      if (addResult.success) {
+        inventoryId = addResult.inventoryId
+        console.log(`New number ${phoneNumber} added to inventory`)
+      }
     }
 
     // Create or update business customer record
@@ -74,10 +120,10 @@ export async function POST(request: NextRequest) {
             businessName,
             contactName,
             zipCode,
-            assignedPhoneNumber: assignment.phoneNumber!,
-            areaCode: assignment.areaCode!,
-            city: assignment.location?.city,
-            state: assignment.location?.state,
+            assignedPhoneNumber: phoneNumber,
+            areaCode: areaCode,
+            city: location?.city,
+            state: location?.state,
             onboardingCompleted: false,
             isActive: true,
           }
@@ -88,14 +134,19 @@ export async function POST(request: NextRequest) {
             contactName,
             contactEmail,
             zipCode,
-            assignedPhoneNumber: assignment.phoneNumber!,
-            areaCode: assignment.areaCode!,
-            city: assignment.location?.city,
-            state: assignment.location?.state,
+            assignedPhoneNumber: phoneNumber,
+            areaCode: areaCode,
+            city: location?.city,
+            state: location?.state,
             onboardingCompleted: false,
             isActive: true,
           }
         })
+
+    // Mark inventory number as assigned to this business
+    if (inventoryId) {
+      await assignNumber(inventoryId, businessCustomer.id)
+    }
 
     // TODO: Send welcome email with phone number details
     console.log(`Welcome email would be sent to ${contactEmail}`)
@@ -105,10 +156,10 @@ export async function POST(request: NextRequest) {
       data: {
         businessId: businessCustomer.id,
         businessName: businessCustomer.businessName,
-        assignedPhoneNumber: assignment.phoneNumber,
-        areaCode: assignment.areaCode,
-        location: assignment.location,
-        message: `Success! Your local SMS number ${assignment.phoneNumber} has been assigned for ${assignment.location?.city}, ${assignment.location?.state}`
+        assignedPhoneNumber: phoneNumber,
+        areaCode: areaCode,
+        location: location,
+        message: `Success! Your local SMS number ${phoneNumber} has been assigned for ${location?.city}, ${location?.state}`
       }
     })
 

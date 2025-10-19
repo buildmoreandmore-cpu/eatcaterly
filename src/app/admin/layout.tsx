@@ -1,6 +1,6 @@
 'use client'
 
-import { ReactNode } from 'react'
+import { ReactNode, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuth, UserButton } from '@clerk/nextjs'
@@ -35,6 +35,17 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
   }
 
   const { user, isDemoMode } = useAuthState()
+
+  // Check if we're in demo mode from URL or localStorage
+  const [isInDemoMode, setIsInDemoMode] = useState(false)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const demoParam = new URLSearchParams(window.location.search).get('demo')
+      const authMode = localStorage.getItem('authMode')
+      setIsInDemoMode(demoParam === 'true' || authMode === 'demo')
+    }
+  }, [])
 
   const handleLogout = async () => {
     if (isDemoMode) {
@@ -73,10 +84,12 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
             {navigation.map((item) => {
               const Icon = item.icon
               const isActive = pathname === item.href
+              // Add demo parameter to href if in demo mode
+              const href = isInDemoMode ? `${item.href}?demo=true` : item.href
               return (
                 <li key={item.name}>
                   <Link
-                    href={item.href}
+                    href={href}
                     className={`flex items-center rounded-lg px-3 py-2 text-sm font-medium ${
                       isActive
                         ? 'bg-blue-100 text-blue-900'
@@ -115,7 +128,7 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
               {!isDemoMode && user && (
                 <div className="flex items-center space-x-3">
                   <span className="text-sm text-gray-600">
-                    {user.emailAddresses[0]?.emailAddress}
+                    {(user as any).emailAddresses?.[0]?.emailAddress || ''}
                   </span>
                   <UserButton afterSignOutUrl="/" />
                 </div>

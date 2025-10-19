@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from '@clerk/nextjs'
 import "./globals.css";
+// Validate environment variables at startup - app will crash with clear error if invalid
+import '@/lib/env'
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,7 +30,10 @@ export default function RootLayout({
 
   if (hasClerkKeys) {
     return (
-      <ClerkProvider>
+      <ClerkProvider
+        signInFallbackRedirectUrl="/admin"
+        signUpFallbackRedirectUrl="/admin"
+      >
         <html lang="en">
           <body
             className={`${geistSans.variable} ${geistMono.variable} antialiased`}

@@ -6,11 +6,13 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2025-08-27.basil',
 })
 
-// Stripe Price IDs (create these in Stripe Dashboard)
-const PRICE_IDS = {
-  starter: process.env.STRIPE_PRICE_ID_STARTER || 'price_starter_test', // $65/month
-  pro: process.env.STRIPE_PRICE_ID_PRO || 'price_pro_test', // $125/month
+// Subscription pricing (split payment model)
+const SUBSCRIPTION_PRICES = {
+  starter: 3500, // $35/month (total $65 - $30 phone number)
+  pro: 9500, // $95/month (total $125 - $30 phone number)
 }
+
+const PHONE_NUMBER_PRICE = 3000 // $30 one-time charge for EZ Texting phone number
 
 export async function POST(request: NextRequest) {
   try {
@@ -53,16 +55,41 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get price ID for the selected plan
-    const priceId = PRICE_IDS[plan as keyof typeof PRICE_IDS]
+    // Get subscription price for the selected plan
+    const subscriptionPrice = SUBSCRIPTION_PRICES[plan as keyof typeof SUBSCRIPTION_PRICES]
 
-    // Create Stripe checkout session for subscription
+    // Create Stripe checkout session with split payment:
+    // 1. $30 one-time charge for phone number (charged immediately)
+    // 2. Subscription ($35/$95) with 14-day trial
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       payment_method_types: ['card'],
       line_items: [
+        // Line item 1: One-time $30 charge for phone number (no trial)
         {
-          price: priceId,
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'A2P-Compliant Phone Number',
+              description: 'One-time setup fee for your dedicated SMS phone number',
+            },
+            unit_amount: PHONE_NUMBER_PRICE,
+          },
+          quantity: 1,
+        },
+        // Line item 2: Subscription with 14-day trial
+        {
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: `${plan.charAt(0).toUpperCase() + plan.slice(1)} Plan`,
+              description: `SMS ordering and menu management for your food business`,
+            },
+            unit_amount: subscriptionPrice,
+            recurring: {
+              interval: 'month',
+            },
+          },
           quantity: 1,
         },
       ],

@@ -1,10 +1,7 @@
-import Link from 'next/link'
-import LoginForm from '../../components/auth/LoginForm'
+'use client'
 
-export const metadata = {
-  title: 'Login - EatCaterly',
-  description: 'Sign in to your EatCaterly account'
-}
+import Link from 'next/link'
+import { SignIn } from '@clerk/nextjs'
 
 export default function LoginPage() {
   return (
@@ -19,16 +16,24 @@ export default function LoginPage() {
         </Link>
 
         {/* Header */}
-        <div className="text-center">
+        <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome back</h1>
           <p className="text-gray-600">Sign in to your EatCaterly account</p>
         </div>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-          <LoginForm />
-        </div>
+        <SignIn
+          routing="hash"
+          appearance={{
+            elements: {
+              rootBox: "mx-auto",
+              card: "shadow-xl"
+            }
+          }}
+          signUpUrl="/signup"
+          afterSignInUrl="/onboarding/plan"
+        />
 
         {/* Back to home link */}
         <div className="text-center mt-6">

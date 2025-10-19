@@ -1,0 +1,7 @@
+[defaults]
+org=eatcaterly
+project=sms-food-delivery
+
+[auth]
+# Get your auth token from: https://sentry.io/settings/account/api/auth-tokens/
+# Set SENTRY_AUTH_TOKEN environment variable instead of storing it here

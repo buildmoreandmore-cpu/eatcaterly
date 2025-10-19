@@ -1,8 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { MapPin, Phone, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
 
 interface SignupResult {
@@ -85,7 +83,7 @@ export default function CustomerSignup() {
                   <MapPin className="inline w-4 h-4 mr-1" />
                   Zip Code
                 </label>
-                <Input
+                <input
                   id="zipCode"
                   name="zipCode"
                   type="text"
@@ -93,7 +91,7 @@ export default function CustomerSignup() {
                   placeholder="30309"
                   value={formData.zipCode}
                   onChange={handleChange}
-                  className="text-center text-lg font-mono"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center text-lg font-mono"
                   required
                 />
                 <p className="text-xs text-gray-500 mt-1">
@@ -105,13 +103,14 @@ export default function CustomerSignup() {
                 <label htmlFor="businessName" className="block text-sm font-medium text-gray-700 mb-2">
                   Business Name
                 </label>
-                <Input
+                <input
                   id="businessName"
                   name="businessName"
                   type="text"
                   placeholder="Mike's Deli"
                   value={formData.businessName}
                   onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
                 />
               </div>
@@ -120,13 +119,14 @@ export default function CustomerSignup() {
                 <label htmlFor="contactName" className="block text-sm font-medium text-gray-700 mb-2">
                   Contact Name
                 </label>
-                <Input
+                <input
                   id="contactName"
                   name="contactName"
                   type="text"
                   placeholder="Mike Johnson"
                   value={formData.contactName}
                   onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
                 />
               </div>
@@ -135,13 +135,14 @@ export default function CustomerSignup() {
                 <label htmlFor="contactEmail" className="block text-sm font-medium text-gray-700 mb-2">
                   Email Address
                 </label>
-                <Input
+                <input
                   id="contactEmail"
                   name="contactEmail"
                   type="email"
                   placeholder="mike@mikesdeli.com"
                   value={formData.contactEmail}
                   onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
                 />
               </div>
@@ -156,10 +157,10 @@ export default function CustomerSignup() {
               </div>
             )}
 
-            <Button
+            <button
               type="submit"
               disabled={isLoading}
-              className="w-full flex items-center justify-center"
+              className="w-full flex items-center justify-center px-4 py-2 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
                 <>
@@ -169,7 +170,7 @@ export default function CustomerSignup() {
               ) : (
                 'Get My Local SMS Number'
               )}
-            </Button>
+            </button>
           </form>
         ) : (
           <div className="bg-green-50 border border-green-200 rounded-lg p-6">
@@ -206,12 +207,12 @@ export default function CustomerSignup() {
               </div>
             </div>
 
-            <Button
-              className="w-full mt-6"
-              onClick={() => window.location.href = '/admin'}
+            <button
+              className="w-full mt-6 px-4 py-2 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              onClick={() => window.location.href = `/onboarding/plan?businessId=${result.data?.businessId}`}
             >
-              Go to Dashboard
-            </Button>
+              Continue to Plan Selection
+            </button>
           </div>
         )}
 
