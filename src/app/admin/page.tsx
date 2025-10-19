@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db'
-import { isAdmin } from '@/lib/auth-utils'
+import { isAdmin } from '@/lib/auth-utils.server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import {
