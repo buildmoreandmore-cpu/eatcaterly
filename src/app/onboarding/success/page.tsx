@@ -1,11 +1,14 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { Suspense, useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
-export default function OnboardingSuccessPage() {
-  const router = useRouter()
+// Disable static generation for this page (uses searchParams)
+export const dynamic = 'force-dynamic'
+
+// Inner component that uses useSearchParams - must be wrapped in Suspense
+function SuccessContent() {
   const searchParams = useSearchParams()
   const sessionId = searchParams.get('session_id')
 
@@ -155,5 +158,23 @@ export default function OnboardingSuccessPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+// Main page component with Suspense wrapper
+export default function OnboardingSuccessPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gradient-to-br from-green-50 to-white flex items-center justify-center p-4">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-lg text-gray-600">Loading...</p>
+          </div>
+        </div>
+      }
+    >
+      <SuccessContent />
+    </Suspense>
   )
 }
