@@ -12,8 +12,12 @@ import {
   ShoppingCart,
   MessageSquare,
   Settings,
-  LogOut
+  LogOut,
+  Building2,
+  Phone,
+  Ticket
 } from 'lucide-react'
+import { checkIsAdminEmail } from '@/lib/auth-utils'
 
 interface AdminLayoutProps {
   children: ReactNode
@@ -39,6 +43,10 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
   // Check if we're in demo mode from URL or localStorage
   const [isInDemoMode, setIsInDemoMode] = useState(false)
 
+  // Check if user is admin
+  const userEmail = (user as any)?.emailAddresses?.[0]?.emailAddress
+  const isUserAdmin = checkIsAdminEmail(userEmail)
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const demoParam = new URLSearchParams(window.location.search).get('demo')
@@ -63,13 +71,19 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
   }
 
   const navigation = [
-    { name: 'Dashboard', href: '/admin', icon: Home },
-    { name: 'Customers', href: '/admin/customers', icon: Users },
-    { name: 'Menu Management', href: '/admin/menus', icon: ChefHat },
-    { name: 'Orders', href: '/admin/orders', icon: ShoppingCart },
-    { name: 'SMS Logs', href: '/admin/sms', icon: MessageSquare },
-    { name: 'Settings', href: '/admin/settings', icon: Settings },
+    { name: 'Dashboard', href: '/admin', icon: Home, adminOnly: false },
+    { name: 'Customers', href: '/admin/customers', icon: Users, adminOnly: false },
+    { name: 'Menu Management', href: '/admin/menus', icon: ChefHat, adminOnly: false },
+    { name: 'Orders', href: '/admin/orders', icon: ShoppingCart, adminOnly: false },
+    { name: 'SMS Logs', href: '/admin/sms', icon: MessageSquare, adminOnly: false },
+    { name: 'Settings', href: '/admin/settings', icon: Settings, adminOnly: false },
+    { name: 'Businesses', href: '/admin/businesses', icon: Building2, adminOnly: true },
+    { name: 'Phone Inventory', href: '/admin/phone-inventory', icon: Phone, adminOnly: true },
+    { name: 'Promo Codes', href: '/admin/promo-codes', icon: Ticket, adminOnly: true },
   ]
+
+  // Filter navigation based on user role
+  const filteredNavigation = navigation.filter(item => !item.adminOnly || isUserAdmin)
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -81,7 +95,7 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
 
         <nav className="mt-6 px-4">
           <ul className="space-y-2">
-            {navigation.map((item) => {
+            {filteredNavigation.map((item) => {
               const Icon = item.icon
               const isActive = pathname === item.href
               // Add demo parameter to href if in demo mode
