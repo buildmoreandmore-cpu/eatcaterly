@@ -5,6 +5,9 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
 
+// Disable static generation for this page (uses searchParams)
+export const dynamic = 'force-dynamic'
+
 interface OnboardingStatus {
   accountId: string
   onboardingComplete: boolean
