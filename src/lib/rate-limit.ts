@@ -16,7 +16,7 @@ const redis = process.env.UPSTASH_REDIS_REST_URL
   : null
 
 // Create rate limiters for different endpoint types
-const createRateLimiter = (requests: number, window: string) => {
+const createRateLimiter = (requests: number, windowSeconds: number) => {
   if (!redis) {
     console.warn('Redis not configured, rate limiting disabled')
     return null
@@ -24,19 +24,19 @@ const createRateLimiter = (requests: number, window: string) => {
 
   return new Ratelimit({
     redis,
-    limiter: Ratelimit.slidingWindow(requests, window),
+    limiter: Ratelimit.slidingWindow(requests, `${windowSeconds} s`),
     analytics: true,
   })
 }
 
 // Payment endpoints: 20 requests per minute
-const paymentLimiter = createRateLimiter(20, '1 m')
+const paymentLimiter = createRateLimiter(20, 60)
 
 // Webhook endpoints: 100 requests per minute
-const webhookLimiter = createRateLimiter(100, '1 m')
+const webhookLimiter = createRateLimiter(100, 60)
 
 // General API endpoints: 50 requests per minute
-const generalLimiter = createRateLimiter(50, '1 m')
+const generalLimiter = createRateLimiter(50, 60)
 
 export interface RateLimitResult {
   success: boolean

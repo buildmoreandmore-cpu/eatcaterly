@@ -69,7 +69,7 @@ export async function getSubscriptionDetails(
     if (!business.stripeSubscriptionId) {
       return {
         success: true,
-        phoneNumber: business.assignedPhoneNumber,
+        phoneNumber: business.assignedPhoneNumber ?? undefined,
         subscriptionStatus: business.subscriptionStatus,
         items: [],
         totalMonthly: 0,
@@ -78,11 +78,14 @@ export async function getSubscriptionDetails(
 
     // Fetch subscription from Stripe
     const subscription = await stripe.subscriptions.retrieve(
-      business.stripeSubscriptionId
-    )
+      business.stripeSubscriptionId,
+      {
+        expand: ['items.data.price']
+      }
+    ) as any // Type assertion for newer Stripe API version
 
     // Parse subscription items
-    const items: SubscriptionItem[] = subscription.items.data.map((item) => ({
+    const items: SubscriptionItem[] = subscription.items.data.map((item: any) => ({
       description: item.price.nickname || 'Subscription Item',
       amount: (item.price.unit_amount || 0) / 100, // Convert cents to dollars
       interval: item.price.recurring?.interval || 'month',
@@ -101,7 +104,7 @@ export async function getSubscriptionDetails(
 
     return {
       success: true,
-      phoneNumber: business.assignedPhoneNumber,
+      phoneNumber: business.assignedPhoneNumber ?? undefined,
       subscriptionStatus: subscription.status,
       items,
       totalMonthly,
@@ -150,13 +153,13 @@ export async function getInvoices(businessId: string): Promise<InvoicesResult> {
     })
 
     const invoices: Invoice[] = stripeInvoices.data.map((invoice) => ({
-      id: invoice.id,
-      number: invoice.number || invoice.id,
+      id: invoice.id ?? '',
+      number: invoice.number || invoice.id || '',
       amount: (invoice.amount_paid || 0) / 100, // Convert cents to dollars
       status: invoice.status || 'unknown',
-      date: new Date(invoice.created * 1000),
-      pdfUrl: invoice.invoice_pdf || '',
-      hostedUrl: invoice.hosted_invoice_url || '',
+      date: new Date((invoice.created ?? 0) * 1000),
+      pdfUrl: invoice.invoice_pdf ?? '',
+      hostedUrl: invoice.hosted_invoice_url ?? '',
     }))
 
     return {

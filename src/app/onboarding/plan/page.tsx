@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useUser } from '@clerk/nextjs'
 
+// Disable static generation for this page (uses searchParams)
+export const dynamic = 'force-dynamic'
+
 type PlanType = 'starter' | 'pro' | null
 
 interface Plan {
