@@ -14,37 +14,19 @@ export default clerkMiddleware(async (auth, req) => {
     return
   }
 
-  // Special handling for admin routes - require specific email
+  // Admin routes require authentication (role-based access handled in components)
   if (isAdminRoute(req)) {
     const { userId } = await auth()
 
-    // Require authentication
+    // Require authentication for all admin routes
     if (!userId) {
       const signInUrl = new URL('/sign-in', req.url)
       signInUrl.searchParams.set('redirect_url', req.url)
       return NextResponse.redirect(signInUrl)
     }
 
-    // Fetch user to check email (works in both test and live environments)
-    try {
-      const client = await clerkClient()
-      const user = await client.users.getUser(userId)
-      const userEmail = user.emailAddresses.find(email => email.id === user.primaryEmailAddressId)?.emailAddress
-
-      if (userEmail !== ADMIN_EMAIL) {
-        // Not the admin user - show 403 error
-        return new NextResponse(
-          JSON.stringify({ error: 'Unauthorized. Admin access only.' }),
-          { status: 403, headers: { 'Content-Type': 'application/json' } }
-        )
-      }
-    } catch (error) {
-      console.error('Error checking admin access:', error)
-      return new NextResponse(
-        JSON.stringify({ error: 'Error verifying admin access' }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
-      )
-    }
+    // Allow all authenticated users to access admin dashboard
+    // Individual pages will check user role and hide admin-only features
   }
 
   // Check if this is a regular protected route (dashboard)
