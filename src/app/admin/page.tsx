@@ -1,179 +1,287 @@
 import { prisma } from '@/lib/db'
-import { Button } from '@/components/ui/button'
+import { isAdmin } from '@/lib/auth-utils'
+import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import {
   Users,
-  ShoppingCart,
   DollarSign,
+  TrendingUp,
+  Phone,
   MessageSquare,
-  Send,
-  TrendingUp
+  ShoppingCart,
+  Building2,
+  CheckCircle,
+  XCircle,
+  Clock,
+  AlertCircle
 } from 'lucide-react'
 
 // Force dynamic rendering for this page
 export const dynamic = 'force-dynamic'
 
-async function getDashboardStats() {
+interface PlatformStats {
+  totalBusinesses: number
+  activeSubscriptions: number
+  trialSubscriptions: number
+  cancelledSubscriptions: number
+  estimatedMRR: number
+  todayRevenue: number
+  weekRevenue: number
+  newSignupsThisWeek: number
+  totalOrders: number
+  todayOrders: number
+  totalSMS: number
+  todaySMS: number
+  phoneNumbersTotal: number
+  phoneNumbersAvailable: number
+  phoneNumbersAssigned: number
+}
+
+interface BusinessActivity {
+  id: string
+  businessName: string
+  contactEmail: string
+  subscriptionStatus: string
+  subscriptionTier: string | null
+  totalOrders: number
+  totalSMS: number
+  lastActive: Date | null
+  createdAt: Date
+}
+
+async function getPlatformStats(): Promise<PlatformStats> {
   try {
+    const now = new Date()
+    const startOfToday = new Date(now.setHours(0, 0, 0, 0))
+    const startOfWeek = new Date(now.setDate(now.getDate() - 7))
+
     const [
-      totalCustomers,
-      activeCustomers,
+      totalBusinesses,
+      activeSubscriptions,
+      trialSubscriptions,
+      cancelledSubscriptions,
+      starterCount,
+      proCount,
+      newSignupsThisWeek,
       totalOrders,
-      paidOrders,
-      totalRevenue,
-      todaysOrders,
-      smsCount
+      todayOrders,
+      totalSMS,
+      todaySMS,
+      phoneInventory
     ] = await Promise.all([
-      prisma.customer.count(),
-      prisma.customer.count({ where: { isActive: true } }),
+      prisma.businessCustomer.count(),
+      prisma.businessCustomer.count({ where: { subscriptionStatus: 'active' } }),
+      prisma.businessCustomer.count({ where: { subscriptionStatus: 'trial' } }),
+      prisma.businessCustomer.count({ where: { subscriptionStatus: 'cancelled' } }),
+      prisma.businessCustomer.count({ where: { subscriptionTier: 'starter', subscriptionStatus: { in: ['active', 'trial'] } } }),
+      prisma.businessCustomer.count({ where: { subscriptionTier: 'pro', subscriptionStatus: { in: ['active', 'trial'] } } }),
+      prisma.businessCustomer.count({
+        where: {
+          createdAt: { gte: startOfWeek }
+        }
+      }),
       prisma.order.count(),
-      prisma.order.count({ where: { status: 'PAID' } }),
-      prisma.order.aggregate({
-        where: { status: 'PAID' },
-        _sum: { totalAmount: true }
-      }),
       prisma.order.count({
-        where: {
-          createdAt: {
-            gte: new Date(new Date().setHours(0, 0, 0, 0))
-          }
-        }
+        where: { createdAt: { gte: startOfToday } }
       }),
+      prisma.smsLog.count(),
       prisma.smsLog.count({
-        where: {
-          createdAt: {
-            gte: new Date(new Date().setHours(0, 0, 0, 0))
-          }
-        }
+        where: { createdAt: { gte: startOfToday } }
+      }),
+      prisma.phoneNumberInventory.groupBy({
+        by: ['status'],
+        _count: true
       })
     ])
 
+    // Estimate MRR based on subscription tiers
+    // Starter: $65/month, Pro: $125/month
+    const estimatedMRR = (starterCount * 65) + (proCount * 125)
+
+    // Estimate revenue (simplified - in reality you'd query Stripe)
+    const todayRevenue = todayOrders * 0 // Orders are from end customers, not subscription revenue
+    const weekRevenue = 0 // Would need to query Stripe for actual subscription revenue
+
+    // Phone inventory stats
+    const phoneNumbersTotal = phoneInventory.reduce((acc, group) => acc + group._count, 0)
+    const phoneNumbersAvailable = phoneInventory.find(g => g.status === 'AVAILABLE')?._count || 0
+    const phoneNumbersAssigned = phoneInventory.find(g => g.status === 'ASSIGNED')?._count || 0
+
     return {
-      totalCustomers,
-      activeCustomers,
+      totalBusinesses,
+      activeSubscriptions,
+      trialSubscriptions,
+      cancelledSubscriptions,
+      estimatedMRR,
+      todayRevenue,
+      weekRevenue,
+      newSignupsThisWeek,
       totalOrders,
-      paidOrders,
-      totalRevenue: totalRevenue._sum.totalAmount || 0,
-      todaysOrders,
-      smsCount
+      todayOrders,
+      totalSMS,
+      todaySMS,
+      phoneNumbersTotal,
+      phoneNumbersAvailable,
+      phoneNumbersAssigned
     }
   } catch (error) {
-    console.error('Database connection failed:', error)
-    // Return demo data when database is not available
+    console.error('Failed to fetch platform stats:', error)
+    // Return demo data if database fails
     return {
-      totalCustomers: 25,
-      activeCustomers: 18,
-      totalOrders: 142,
-      paidOrders: 128,
-      totalRevenue: 2850,
-      todaysOrders: 8,
-      smsCount: 15
+      totalBusinesses: 0,
+      activeSubscriptions: 0,
+      trialSubscriptions: 0,
+      cancelledSubscriptions: 0,
+      estimatedMRR: 0,
+      todayRevenue: 0,
+      weekRevenue: 0,
+      newSignupsThisWeek: 0,
+      totalOrders: 0,
+      todayOrders: 0,
+      totalSMS: 0,
+      todaySMS: 0,
+      phoneNumbersTotal: 0,
+      phoneNumbersAvailable: 0,
+      phoneNumbersAssigned: 0
     }
   }
 }
 
-async function getTodaysMenu() {
+async function getRecentBusinessActivity(): Promise<BusinessActivity[]> {
   try {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
-    const menu = await prisma.menu.findFirst({
-      where: { date: today },
-      include: {
-        menuItems: {
-          where: { isAvailable: true },
-          orderBy: { name: 'asc' }
+    const businesses = await prisma.businessCustomer.findMany({
+      take: 10,
+      orderBy: { updatedAt: 'desc' },
+      select: {
+        id: true,
+        businessName: true,
+        contactEmail: true,
+        subscriptionStatus: true,
+        subscriptionTier: true,
+        createdAt: true,
+        updatedAt: true,
+        orders: {
+          select: { id: true },
+          take: 1
         }
       }
     })
 
-    return menu
-  } catch (error) {
-    console.error('Failed to fetch today\'s menu:', error)
-    // Return demo menu when database is not available
-    return {
-      id: 'demo-menu',
-      title: 'Demo Menu - Thursday Special',
-      date: new Date(),
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      menuItems: [
-        {
-          id: 'demo-item-1',
-          menuId: 'demo-menu',
-          name: 'Grilled Chicken Sandwich',
-          description: 'Juicy grilled chicken with fresh vegetables',
-          price: 1200,
-          isAvailable: true,
-          category: 'Main',
-          imageUrl: null
-        },
-        {
-          id: 'demo-item-2',
-          menuId: 'demo-menu',
-          name: 'Caesar Salad',
-          description: 'Fresh romaine lettuce with parmesan and croutons',
-          price: 950,
-          isAvailable: true,
-          category: 'Salad',
-          imageUrl: null
-        },
-        {
-          id: 'demo-item-3',
-          menuId: 'demo-menu',
-          name: 'Chocolate Chip Cookies',
-          description: 'Freshly baked cookies',
-          price: 450,
-          isAvailable: true,
-          category: 'Dessert',
-          imageUrl: null
+    return await Promise.all(
+      businesses.map(async (business) => {
+        const [orderCount, smsCount, lastOrder] = await Promise.all([
+          prisma.order.count({ where: { businessId: business.id } }),
+          prisma.smsLog.count(),
+          prisma.order.findFirst({
+            where: { businessId: business.id },
+            orderBy: { createdAt: 'desc' },
+            select: { createdAt: true }
+          })
+        ])
+
+        return {
+          id: business.id,
+          businessName: business.businessName,
+          contactEmail: business.contactEmail,
+          subscriptionStatus: business.subscriptionStatus,
+          subscriptionTier: business.subscriptionTier,
+          totalOrders: orderCount,
+          totalSMS: smsCount,
+          lastActive: lastOrder?.createdAt || null,
+          createdAt: business.createdAt
         }
-      ]
-    }
+      })
+    )
+  } catch (error) {
+    console.error('Failed to fetch business activity:', error)
+    return []
   }
 }
 
 export default async function AdminDashboard() {
-  const stats = await getDashboardStats()
-  const todaysMenu = await getTodaysMenu()
+  // Check if user is admin - if not, show customer dashboard
+  const userIsAdmin = await isAdmin()
+
+  if (!userIsAdmin) {
+    // Redirect to customer dashboard (account page)
+    redirect('/admin/account')
+  }
+
+  const stats = await getPlatformStats()
+  const recentActivity = await getRecentBusinessActivity()
 
   const statsCards = [
     {
-      title: 'Total Customers',
-      value: stats.totalCustomers,
-      subtitle: `${stats.activeCustomers} active`,
-      icon: Users,
-      color: 'bg-blue-50 text-blue-600'
+      title: 'Total Businesses',
+      value: stats.totalBusinesses,
+      subtitle: `${stats.newSignupsThisWeek} new this week`,
+      icon: Building2,
+      color: 'bg-blue-50 text-blue-600',
+      href: '/admin/businesses'
     },
     {
-      title: 'Total Orders',
-      value: stats.totalOrders,
-      subtitle: `${stats.paidOrders} paid`,
-      icon: ShoppingCart,
-      color: 'bg-green-50 text-green-600'
+      title: 'Active Subscriptions',
+      value: stats.activeSubscriptions,
+      subtitle: `${stats.trialSubscriptions} trials`,
+      icon: CheckCircle,
+      color: 'bg-green-50 text-green-600',
+      href: '/admin/businesses'
     },
     {
-      title: 'Revenue',
-      value: `$${(stats.totalRevenue / 100).toFixed(2)}`,
-      subtitle: 'Total earned',
+      title: 'Estimated MRR',
+      value: `$${stats.estimatedMRR.toLocaleString()}`,
+      subtitle: 'Monthly recurring revenue',
       icon: DollarSign,
-      color: 'bg-yellow-50 text-yellow-600'
+      color: 'bg-yellow-50 text-yellow-600',
+      href: '/admin/businesses'
     },
     {
-      title: 'Today&apos;s Orders',
-      value: stats.todaysOrders,
-      subtitle: 'Orders today',
-      icon: TrendingUp,
-      color: 'bg-purple-50 text-purple-600'
+      title: 'Platform Orders',
+      value: stats.totalOrders.toLocaleString(),
+      subtitle: `${stats.todayOrders} today`,
+      icon: ShoppingCart,
+      color: 'bg-purple-50 text-purple-600',
+      href: '/admin/businesses'
     },
     {
       title: 'SMS Messages',
-      value: stats.smsCount,
-      subtitle: 'Sent today',
+      value: stats.totalSMS.toLocaleString(),
+      subtitle: `${stats.todaySMS} today`,
       icon: MessageSquare,
-      color: 'bg-red-50 text-red-600'
+      color: 'bg-red-50 text-red-600',
+      href: '/admin/businesses'
+    },
+    {
+      title: 'Phone Numbers',
+      value: stats.phoneNumbersTotal,
+      subtitle: `${stats.phoneNumbersAvailable} available`,
+      icon: Phone,
+      color: 'bg-indigo-50 text-indigo-600',
+      href: '/admin/phone-inventory'
     }
   ]
+
+  const getStatusBadge = (status: string) => {
+    const styles = {
+      active: 'bg-green-100 text-green-800',
+      trial: 'bg-blue-100 text-blue-800',
+      cancelled: 'bg-red-100 text-red-800',
+      suspended: 'bg-gray-100 text-gray-800'
+    }
+    return styles[status as keyof typeof styles] || 'bg-gray-100 text-gray-800'
+  }
+
+  const getActivityScore = (business: BusinessActivity) => {
+    if (!business.lastActive) return 'Inactive'
+    const daysSinceActive = Math.floor(
+      (Date.now() - business.lastActive.getTime()) / (1000 * 60 * 60 * 24)
+    )
+    if (daysSinceActive === 0) return 'Active today'
+    if (daysSinceActive === 1) return 'Active yesterday'
+    if (daysSinceActive <= 7) return `Active ${daysSinceActive}d ago`
+    if (daysSinceActive <= 30) return `Active ${Math.floor(daysSinceActive / 7)}w ago`
+    return 'Inactive'
+  }
 
   return (
     <div className="space-y-6">
@@ -181,101 +289,214 @@ export default async function AdminDashboard() {
       <div className="md:flex md:items-center md:justify-between">
         <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-bold leading-7 text-gray-900 sm:truncate sm:text-3xl sm:tracking-tight">
-            Dashboard
+            Platform Analytics
           </h1>
           <p className="mt-1 text-sm text-gray-500">
-            Welcome to your SMS Food Delivery admin panel
+            Monitor your EatCaterly platform performance and business health
           </p>
-        </div>
-        <div className="mt-4 flex md:ml-4 md:mt-0">
-          <form action="/api/sms/broadcast" method="POST">
-            <Button type="submit" className="inline-flex items-center">
-              <Send className="mr-2 h-4 w-4" />
-              Broadcast Menu
-            </Button>
-          </form>
         </div>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {statsCards.map((stat) => {
           const Icon = stat.icon
           return (
-            <div key={stat.title} className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <div className={`p-3 rounded-md ${stat.color}`}>
-                      <Icon className="h-6 w-6" />
+            <Link key={stat.title} href={stat.href}>
+              <div className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow cursor-pointer">
+                <div className="p-5">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <div className={`p-3 rounded-md ${stat.color}`}>
+                        <Icon className="h-6 w-6" />
+                      </div>
                     </div>
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
-                        {stat.title}
-                      </dt>
-                      <dd className="text-lg font-medium text-gray-900">
-                        {stat.value}
-                      </dd>
-                      <dd className="text-sm text-gray-500">
-                        {stat.subtitle}
-                      </dd>
-                    </dl>
+                    <div className="ml-5 w-0 flex-1">
+                      <dl>
+                        <dt className="text-sm font-medium text-gray-500 truncate">
+                          {stat.title}
+                        </dt>
+                        <dd className="text-lg font-medium text-gray-900">
+                          {stat.value}
+                        </dd>
+                        <dd className="text-sm text-gray-500">
+                          {stat.subtitle}
+                        </dd>
+                      </dl>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            </Link>
           )
         })}
       </div>
 
-      {/* Today's Menu */}
+      {/* Subscription Health */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="bg-white shadow rounded-lg p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">
+            Subscription Health
+          </h3>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+                <span className="text-sm font-medium text-gray-900">Active</span>
+              </div>
+              <span className="text-2xl font-bold text-green-600">
+                {stats.activeSubscriptions}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Clock className="h-5 w-5 text-blue-600 mr-2" />
+                <span className="text-sm font-medium text-gray-900">Trial</span>
+              </div>
+              <span className="text-2xl font-bold text-blue-600">
+                {stats.trialSubscriptions}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <XCircle className="h-5 w-5 text-red-600 mr-2" />
+                <span className="text-sm font-medium text-gray-900">Cancelled</span>
+              </div>
+              <span className="text-2xl font-bold text-red-600">
+                {stats.cancelledSubscriptions}
+              </span>
+            </div>
+            {stats.cancelledSubscriptions > 0 && stats.totalBusinesses > 0 && (
+              <div className="pt-4 border-t border-gray-200">
+                <div className="flex items-center">
+                  <AlertCircle className="h-5 w-5 text-yellow-600 mr-2" />
+                  <span className="text-sm text-gray-600">
+                    Churn rate: {((stats.cancelledSubscriptions / stats.totalBusinesses) * 100).toFixed(1)}%
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-white shadow rounded-lg p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">
+            Phone Inventory Status
+          </h3>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-900">Total Numbers</span>
+              <span className="text-2xl font-bold text-gray-900">
+                {stats.phoneNumbersTotal}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-900">Available</span>
+              <span className="text-2xl font-bold text-green-600">
+                {stats.phoneNumbersAvailable}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-900">Assigned</span>
+              <span className="text-2xl font-bold text-blue-600">
+                {stats.phoneNumbersAssigned}
+              </span>
+            </div>
+            {stats.phoneNumbersAvailable < 5 && (
+              <div className="pt-4 border-t border-gray-200">
+                <div className="flex items-center">
+                  <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
+                  <span className="text-sm text-red-600 font-medium">
+                    Low inventory! Order more numbers
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Business Activity */}
       <div className="bg-white shadow rounded-lg">
         <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-            Today&apos;s Menu
-          </h3>
-          {todaysMenu ? (
-            <div>
-              <div className="mb-4">
-                <h4 className="font-medium text-gray-900">{todaysMenu.title}</h4>
-                <p className="text-sm text-gray-500">
-                  {todaysMenu.date.toLocaleDateString()} • {todaysMenu.isActive ? 'Active' : 'Inactive'}
-                </p>
-              </div>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {todaysMenu.menuItems.map((item) => (
-                  <div key={item.id} className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h5 className="font-medium text-gray-900">{item.name}</h5>
-                        <p className="text-sm text-gray-500 mt-1">{item.description}</p>
-                        {item.category && (
-                          <span className="inline-block bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded mt-2">
-                            {item.category}
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-right">
-                        <p className="font-medium text-gray-900">
-                          ${(item.price / 100).toFixed(2)}
-                        </p>
-                        <p className={`text-xs ${item.isAvailable ? 'text-green-600' : 'text-red-600'}`}>
-                          {item.isAvailable ? 'Available' : 'Unavailable'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg leading-6 font-medium text-gray-900">
+              Recent Business Activity
+            </h3>
+            <Link
+              href="/admin/businesses"
+              className="text-sm font-medium text-blue-600 hover:text-blue-700"
+            >
+              View all →
+            </Link>
+          </div>
+          {recentActivity.length === 0 ? (
+            <div className="text-center py-6 text-gray-500">
+              No businesses yet. Waiting for first signup!
             </div>
           ) : (
-            <div className="text-center py-6">
-              <p className="text-gray-500">No menu set for today</p>
-              <Button className="mt-4">
-                Create Today&apos;s Menu
-              </Button>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Business
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Tier
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Orders
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Activity
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Joined
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {recentActivity.map((business) => (
+                    <tr key={business.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex flex-col">
+                          <div className="text-sm font-medium text-gray-900">
+                            {business.businessName}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {business.contactEmail}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadge(
+                            business.subscriptionStatus
+                          )}`}
+                        >
+                          {business.subscriptionStatus}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {business.subscriptionTier || '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {business.totalOrders}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {getActivityScore(business)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {business.createdAt.toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
@@ -285,37 +506,37 @@ export default async function AdminDashboard() {
       <div className="bg-white shadow rounded-lg">
         <div className="px-4 py-5 sm:p-6">
           <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-            Quick Actions
+            Admin Quick Actions
           </h3>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <a href="/admin/menus">
-              <Button variant="outline" className="justify-start h-auto p-4 w-full">
-                <div className="text-left">
-                  <div className="font-medium">Manage Menus</div>
-                  <div className="text-sm text-gray-500">Create daily menus with calendar</div>
-                </div>
-              </Button>
-            </a>
-            <a href="/admin/customers">
-              <Button variant="outline" className="justify-start h-auto p-4 w-full">
-                <div className="text-left">
-                  <div className="font-medium">Manage Customers</div>
-                  <div className="text-sm text-gray-500">Add names to phone numbers</div>
-                </div>
-              </Button>
-            </a>
-            <Button variant="outline" className="justify-start h-auto p-4">
-              <div className="text-left">
-                <div className="font-medium">Send SMS</div>
-                <div className="text-sm text-gray-500">Message customers</div>
+            <Link href="/admin/businesses">
+              <div className="border border-gray-200 rounded-lg p-4 hover:border-blue-500 hover:shadow-sm transition-all cursor-pointer">
+                <Building2 className="h-6 w-6 text-blue-600 mb-2" />
+                <div className="font-medium text-gray-900">Manage Businesses</div>
+                <div className="text-sm text-gray-500">View all customer accounts</div>
               </div>
-            </Button>
-            <Button variant="outline" className="justify-start h-auto p-4">
-              <div className="text-left">
-                <div className="font-medium">View Orders</div>
-                <div className="text-sm text-gray-500">Check recent orders</div>
+            </Link>
+            <Link href="/admin/phone-inventory">
+              <div className="border border-gray-200 rounded-lg p-4 hover:border-blue-500 hover:shadow-sm transition-all cursor-pointer">
+                <Phone className="h-6 w-6 text-indigo-600 mb-2" />
+                <div className="font-medium text-gray-900">Phone Inventory</div>
+                <div className="text-sm text-gray-500">Manage phone numbers</div>
               </div>
-            </Button>
+            </Link>
+            <Link href="/admin/promo-codes">
+              <div className="border border-gray-200 rounded-lg p-4 hover:border-blue-500 hover:shadow-sm transition-all cursor-pointer">
+                <TrendingUp className="h-6 w-6 text-green-600 mb-2" />
+                <div className="font-medium text-gray-900">Promo Codes</div>
+                <div className="text-sm text-gray-500">Create special offers</div>
+              </div>
+            </Link>
+            <Link href="/admin/account">
+              <div className="border border-gray-200 rounded-lg p-4 hover:border-blue-500 hover:shadow-sm transition-all cursor-pointer">
+                <Users className="h-6 w-6 text-purple-600 mb-2" />
+                <div className="font-medium text-gray-900">My Account</div>
+                <div className="text-sm text-gray-500">View your business account</div>
+              </div>
+            </Link>
           </div>
         </div>
       </div>
