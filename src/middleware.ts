@@ -2,7 +2,6 @@ import { clerkMiddleware, createRouteMatcher, clerkClient } from '@clerk/nextjs/
 import { NextResponse } from 'next/server'
 
 const ADMIN_EMAIL = 'eatcaterly@gmail.com'
-const ADMIN_USER_ID = 'user_34AyHh3kVYM0kr5LBYkf1phUrLu' // eatcaterly@gmail.com user ID
 
 const isAdminRoute = createRouteMatcher(['/admin(.*)'])
 const isProtectedRoute = createRouteMatcher(['/dashboard(.*)'])
@@ -26,12 +25,24 @@ export default clerkMiddleware(async (auth, req) => {
       return NextResponse.redirect(signInUrl)
     }
 
-    // Check if this is the admin user ID (faster than fetching user)
-    if (userId !== ADMIN_USER_ID) {
-      // Not the admin user - show 403 error
+    // Fetch user to check email (works in both test and live environments)
+    try {
+      const client = await clerkClient()
+      const user = await client.users.getUser(userId)
+      const userEmail = user.emailAddresses.find(email => email.id === user.primaryEmailAddressId)?.emailAddress
+
+      if (userEmail !== ADMIN_EMAIL) {
+        // Not the admin user - show 403 error
+        return new NextResponse(
+          JSON.stringify({ error: 'Unauthorized. Admin access only.' }),
+          { status: 403, headers: { 'Content-Type': 'application/json' } }
+        )
+      }
+    } catch (error) {
+      console.error('Error checking admin access:', error)
       return new NextResponse(
-        JSON.stringify({ error: 'Unauthorized. Admin access only.' }),
-        { status: 403, headers: { 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Error verifying admin access' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
       )
     }
   }
