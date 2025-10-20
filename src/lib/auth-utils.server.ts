@@ -9,11 +9,16 @@ const ADMIN_EMAIL = 'eatcaterly@gmail.com'
 export async function isAdmin(): Promise<boolean> {
   try {
     const user = await currentUser()
+    console.log('[isAdmin] User exists:', !!user)
     if (!user) return false
 
     const userEmail = user.emailAddresses.find(
       email => email.id === user.primaryEmailAddressId
     )?.emailAddress
+
+    console.log('[isAdmin] User email:', userEmail)
+    console.log('[isAdmin] Admin email:', ADMIN_EMAIL)
+    console.log('[isAdmin] Emails match:', userEmail === ADMIN_EMAIL)
 
     return userEmail === ADMIN_EMAIL
   } catch (error) {
