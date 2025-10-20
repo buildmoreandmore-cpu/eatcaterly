@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useUser } from '@clerk/nextjs'
+import { useUser, useClerk } from '@clerk/nextjs'
 
 interface OnboardingResult {
   success: boolean
@@ -22,6 +22,7 @@ interface OnboardingResult {
 export default function OnboardingPage() {
   const router = useRouter()
   const { user, isLoaded } = useUser()
+  const { signOut } = useClerk()
 
   const [formData, setFormData] = useState({
     businessName: '',
@@ -235,6 +236,16 @@ export default function OnboardingPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white flex items-center justify-center p-4">
       <div className="max-w-2xl w-full">
         <div className="bg-white rounded-2xl shadow-xl p-8 md:p-12">
+          {/* Sign Out Button */}
+          <div className="mb-4 text-right">
+            <button
+              onClick={() => signOut(() => router.push('/'))}
+              className="text-sm text-gray-500 hover:text-gray-700 underline"
+            >
+              Sign out and start over
+            </button>
+          </div>
+
           {/* Progress Indicator */}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-2">
