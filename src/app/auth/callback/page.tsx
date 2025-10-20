@@ -30,8 +30,15 @@ export default async function AuthCallbackPage() {
       redirect('/sign-in')
     }
 
-    // Check if this is the platform admin
-    if (userEmail === ADMIN_EMAIL) {
+    // Check if this is the platform admin (case-insensitive, trimmed)
+    const normalizedUserEmail = userEmail.toLowerCase().trim()
+    const normalizedAdminEmail = ADMIN_EMAIL.toLowerCase().trim()
+
+    console.log('[Auth Callback] Normalized user email:', normalizedUserEmail)
+    console.log('[Auth Callback] Normalized admin email:', normalizedAdminEmail)
+    console.log('[Auth Callback] Match:', normalizedUserEmail === normalizedAdminEmail)
+
+    if (normalizedUserEmail === normalizedAdminEmail) {
       console.log('[Auth Callback] Admin email detected, redirecting to /admin')
       // Platform admin always goes to admin dashboard
       redirect('/admin')

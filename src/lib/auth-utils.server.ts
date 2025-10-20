@@ -16,11 +16,22 @@ export async function isAdmin(): Promise<boolean> {
       email => email.id === user.primaryEmailAddressId
     )?.emailAddress
 
-    console.log('[isAdmin] User email:', userEmail)
-    console.log('[isAdmin] Admin email:', ADMIN_EMAIL)
-    console.log('[isAdmin] Emails match:', userEmail === ADMIN_EMAIL)
+    if (!userEmail) {
+      console.log('[isAdmin] No email found for user')
+      return false
+    }
 
-    return userEmail === ADMIN_EMAIL
+    // Case-insensitive comparison with trimming
+    const normalizedUserEmail = userEmail.toLowerCase().trim()
+    const normalizedAdminEmail = ADMIN_EMAIL.toLowerCase().trim()
+
+    console.log('[isAdmin] User email:', userEmail)
+    console.log('[isAdmin] Normalized user email:', normalizedUserEmail)
+    console.log('[isAdmin] Admin email:', ADMIN_EMAIL)
+    console.log('[isAdmin] Normalized admin email:', normalizedAdminEmail)
+    console.log('[isAdmin] Emails match:', normalizedUserEmail === normalizedAdminEmail)
+
+    return normalizedUserEmail === normalizedAdminEmail
   } catch (error) {
     console.error('Error checking admin status:', error)
     return false
