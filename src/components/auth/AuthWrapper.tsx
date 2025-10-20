@@ -40,16 +40,25 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
 // Hook to get current auth state
 export function useAuthState() {
   const [isClient, setIsClient] = useState(false)
+  const [isDemoMode, setIsDemoMode] = useState(false)
 
   useEffect(() => {
     setIsClient(true)
+
+    // Check for demo mode
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search)
+      const demoParam = urlParams.get('demo') === 'true'
+      const demoStorage = localStorage.getItem('authMode') === 'demo'
+      setIsDemoMode(demoParam || demoStorage)
+    }
   }, [])
 
   // For testing, always return authenticated
   return {
     user: null,
     isLoaded: true,
-    isDemoMode: false,
+    isDemoMode,
     isAuthenticated: isClient // Authenticated once client-side mounted
   }
 }

@@ -25,27 +25,41 @@ interface AdminLayoutProps {
 
 function AdminLayoutContent({ children }: AdminLayoutProps) {
   const pathname = usePathname()
+  const [isInDemoMode, setIsInDemoMode] = useState(false)
+
   const hasClerkKeys = typeof window !== 'undefined' &&
     process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
     process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY !== 'pk_test_dummy_clerk_publishable'
 
-  // Always call hooks but handle the result conditionally
+  // Always call hooks (React rules of hooks)
+  let authResult
   let clerkSignOut
   try {
-    const authResult = useAuth()
+    authResult = useAuth()
     clerkSignOut = hasClerkKeys ? authResult.signOut : async () => {}
   } catch {
+    authResult = { user: null }
     clerkSignOut = async () => {}
   }
 
-  const { user, isDemoMode } = useAuthState()
+  const { user: authStateUser, isDemoMode } = useAuthState()
 
-  // Check if we're in demo mode from URL or localStorage
-  const [isInDemoMode, setIsInDemoMode] = useState(false)
+  // Use Clerk user if available, otherwise fall back to authState user
+  const user = authResult.user || authStateUser
 
   // Check if user is admin
   const userEmail = (user as any)?.emailAddresses?.[0]?.emailAddress
   const isUserAdmin = checkIsAdminEmail(userEmail)
+
+  // Check if we're in demo mode from URL or localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search)
+      const demoParam = urlParams.get('demo') === 'true'
+      const authMode = localStorage.getItem('authMode')
+      setIsInDemoMode(demoParam === true || authMode === 'demo')
+    }
+  }, [])
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
