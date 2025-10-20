@@ -11,9 +11,9 @@ export default function Hero() {
     if (typeof window !== 'undefined') {
       localStorage.setItem('authMode', 'demo')
       localStorage.setItem('isAuthenticated', 'true')
+      // Use window.location for full page reload to trigger middleware
+      window.location.href = '/admin?demo=true'
     }
-    // Navigate to admin dashboard in demo mode
-    router.push('/admin?demo=true')
   }
 
   return (
