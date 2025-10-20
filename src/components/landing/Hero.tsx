@@ -1,20 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 
 export default function Hero() {
-  const router = useRouter()
-
-  const handleViewDemo = () => {
-    // Set demo mode in localStorage
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('authMode', 'demo')
-      localStorage.setItem('isAuthenticated', 'true')
-      // Use window.location for full page reload to trigger middleware
-      window.location.href = '/admin?demo=true'
-    }
-  }
 
   return (
     <section className="bg-gradient-to-br from-orange-50 to-white py-20 lg:py-32">
@@ -41,12 +29,12 @@ export default function Hero() {
               >
                 Get Started Free
               </Link>
-              <button
-                onClick={handleViewDemo}
-                className="border border-gray-300 text-gray-700 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gray-50 transition-colors"
+              <Link
+                href="/demo"
+                className="border border-gray-300 text-gray-700 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gray-50 transition-colors text-center"
               >
                 View Demo
-              </button>
+              </Link>
             </div>
 
             {/* Trust indicators */}
