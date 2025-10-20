@@ -292,17 +292,6 @@ export default function DemoPage() {
           </div>
         )}
 
-        {/* CTA Banner */}
-        <div className="mt-12 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg p-8 text-center text-white">
-          <h3 className="text-2xl font-bold mb-2">Ready to start your catering business?</h3>
-          <p className="mb-6 text-orange-100">Get started with a 14-day free trial. No credit card required.</p>
-          <Link
-            href="/login"
-            className="inline-block bg-white text-orange-600 px-8 py-3 rounded-lg font-bold hover:bg-orange-50 transition-colors"
-          >
-            Start Your Free Trial
-          </Link>
-        </div>
       </div>
     </div>
   )
