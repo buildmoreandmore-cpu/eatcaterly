@@ -59,6 +59,7 @@ export default function BusinessAccountPage() {
         setLoading(false)
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded, user])
 
   async function loadBusinessAndAccountData() {
