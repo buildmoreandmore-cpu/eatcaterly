@@ -16,6 +16,15 @@ export default clerkMiddleware(async (auth, req) => {
 
   // Admin routes require authentication (role-based access handled in components)
   if (isAdminRoute(req)) {
+    // Check if this is demo mode (bypass auth for demo)
+    const url = new URL(req.url)
+    const isDemoMode = url.searchParams.get('demo') === 'true'
+
+    if (isDemoMode) {
+      // Allow demo mode without authentication
+      return
+    }
+
     const { userId } = await auth()
 
     // Require authentication for all admin routes
