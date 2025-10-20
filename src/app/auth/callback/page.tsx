@@ -13,6 +13,7 @@ export default async function AuthCallbackPage() {
 
     if (!user) {
       // Not authenticated, redirect to sign-in
+      console.log('[Auth Callback] No user found, redirecting to sign-in')
       redirect('/sign-in')
     }
 
@@ -21,13 +22,17 @@ export default async function AuthCallbackPage() {
       email => email.id === user.primaryEmailAddressId
     )?.emailAddress
 
+    console.log('[Auth Callback] User email:', userEmail)
+
     if (!userEmail) {
       // No email found, something went wrong
+      console.log('[Auth Callback] No email found, redirecting to sign-in')
       redirect('/sign-in')
     }
 
     // Check if this is the platform admin
     if (userEmail === ADMIN_EMAIL) {
+      console.log('[Auth Callback] Admin email detected, redirecting to /admin')
       // Platform admin always goes to admin dashboard
       redirect('/admin')
     }
