@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db'
 import { isAdmin } from '@/lib/auth-utils.server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import BusinessDashboard from '@/components/dashboard/BusinessDashboard'
 import {
   Users,
   DollarSign,
@@ -198,13 +199,99 @@ async function getRecentBusinessActivity(): Promise<BusinessActivity[]> {
   }
 }
 
+async function getBusinessStats(businessId: string) {
+  try {
+    const now = new Date()
+    const startOfToday = new Date(now.setHours(0, 0, 0, 0))
+
+    const [totalCustomers, totalOrders, totalSMS, todayOrders, todaySMS, paidOrders] = await Promise.all([
+      prisma.customer.count({ where: { businessId } }),
+      prisma.order.count({ where: { businessId } }),
+      prisma.smsLog.count(), // Would need to filter by businessId if SMS logs have that field
+      prisma.order.count({ where: { businessId, createdAt: { gte: startOfToday } } }),
+      prisma.smsLog.count({ where: { createdAt: { gte: startOfToday } } }),
+      prisma.order.count({ where: { businessId, status: 'PAID' } })
+    ])
+
+    // Calculate total revenue from paid orders
+    const paidOrdersData = await prisma.order.findMany({
+      where: { businessId, status: 'PAID' },
+      select: { total: true }
+    })
+    const totalRevenue = paidOrdersData.reduce((sum, order) => sum + order.total, 0)
+
+    return {
+      totalCustomers,
+      activeCustomers: totalCustomers, // Would need to track active status
+      totalOrders,
+      paidOrders,
+      totalRevenue,
+      todayOrders,
+      totalSMS,
+      todaySMS
+    }
+  } catch (error) {
+    console.error('Failed to fetch business stats:', error)
+    return {
+      totalCustomers: 0,
+      activeCustomers: 0,
+      totalOrders: 0,
+      paidOrders: 0,
+      totalRevenue: 0,
+      todayOrders: 0,
+      totalSMS: 0,
+      todaySMS: 0
+    }
+  }
+}
+
+async function getTodaysMenu(businessId: string) {
+  try {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+
+    const menu = await prisma.menu.findFirst({
+      where: {
+        businessId,
+        date: {
+          gte: today,
+          lt: tomorrow
+        }
+      },
+      include: {
+        menuItems: true
+      }
+    })
+
+    return menu
+  } catch (error) {
+    console.error('Failed to fetch todays menu:', error)
+    return null
+  }
+}
+
+async function getBusinessIdByEmail(email: string) {
+  try {
+    const business = await prisma.businessCustomer.findUnique({
+      where: { contactEmail: email },
+      select: { id: true }
+    })
+    return business?.id || null
+  } catch (error) {
+    console.error('Failed to fetch business by email:', error)
+    return null
+  }
+}
+
 export default async function AdminDashboard() {
   // Check if user is admin - if not, show customer dashboard
   const userIsAdmin = await isAdmin()
 
   if (!userIsAdmin) {
-    // Redirect to customer dashboard (account page)
-    redirect('/admin/account')
+    // Show business customer dashboard for non-admin users
+    return <BusinessDashboard />
   }
 
   const stats = await getPlatformStats()
