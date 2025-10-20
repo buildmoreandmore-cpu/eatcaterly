@@ -71,19 +71,25 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
   }
 
   const navigation = [
-    { name: 'Dashboard', href: '/admin', icon: Home, adminOnly: false },
-    { name: 'Customers', href: '/admin/customers', icon: Users, adminOnly: false },
-    { name: 'Menu Management', href: '/admin/menus', icon: ChefHat, adminOnly: false },
-    { name: 'Orders', href: '/admin/orders', icon: ShoppingCart, adminOnly: false },
-    { name: 'SMS Logs', href: '/admin/sms', icon: MessageSquare, adminOnly: false },
-    { name: 'Settings', href: '/admin/settings', icon: Settings, adminOnly: false },
-    { name: 'Businesses', href: '/admin/businesses', icon: Building2, adminOnly: true },
-    { name: 'Phone Inventory', href: '/admin/phone-inventory', icon: Phone, adminOnly: true },
-    { name: 'Promo Codes', href: '/admin/promo-codes', icon: Ticket, adminOnly: true },
+    { name: 'Dashboard', href: '/admin', icon: Home, adminOnly: false, businessOnly: false },
+    { name: 'Customers', href: '/admin/customers', icon: Users, adminOnly: false, businessOnly: true },
+    { name: 'Menu Management', href: '/admin/menus', icon: ChefHat, adminOnly: false, businessOnly: true },
+    { name: 'Orders', href: '/admin/orders', icon: ShoppingCart, adminOnly: false, businessOnly: true },
+    { name: 'SMS Logs', href: '/admin/sms', icon: MessageSquare, adminOnly: false, businessOnly: true },
+    { name: 'Settings', href: '/admin/settings', icon: Settings, adminOnly: false, businessOnly: false },
+    { name: 'Businesses', href: '/admin/businesses', icon: Building2, adminOnly: true, businessOnly: false },
+    { name: 'Phone Inventory', href: '/admin/phone-inventory', icon: Phone, adminOnly: true, businessOnly: false },
+    { name: 'Promo Codes', href: '/admin/promo-codes', icon: Ticket, adminOnly: true, businessOnly: false },
   ]
 
   // Filter navigation based on user role
-  const filteredNavigation = navigation.filter(item => !item.adminOnly || isUserAdmin)
+  // Platform admins see: Dashboard, Businesses, Phone Inventory, Promo Codes, Settings
+  // Business customers see: Dashboard, Customers, Menus, Orders, SMS Logs, Settings
+  const filteredNavigation = navigation.filter(item => {
+    if (item.adminOnly && !isUserAdmin) return false // Hide admin-only items from non-admins
+    if (item.businessOnly && isUserAdmin) return false // Hide business-only items from platform admins
+    return true
+  })
 
   return (
     <div className="min-h-screen bg-gray-100">
