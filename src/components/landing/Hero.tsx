@@ -24,7 +24,7 @@ export default function Hero() {
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4">
               <Link
-                href="/login"
+                href="/sign-in"
                 className="bg-orange-500 text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-orange-600 transition-colors text-center"
               >
                 Get Started Free
