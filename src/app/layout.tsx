@@ -31,8 +31,8 @@ export default function RootLayout({
   if (hasClerkKeys) {
     return (
       <ClerkProvider
-        signInFallbackRedirectUrl="/admin"
-        signUpFallbackRedirectUrl="/admin"
+        signInFallbackRedirectUrl="/auth/callback"
+        signUpFallbackRedirectUrl="/auth/callback"
       >
         <html lang="en">
           <body
