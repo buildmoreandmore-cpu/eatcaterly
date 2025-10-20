@@ -32,7 +32,6 @@ export default function LoginPage() {
             }
           }}
           signUpUrl="/signup"
-          afterSignInUrl="/onboarding/plan"
         />
 
         {/* Back to home link */}
