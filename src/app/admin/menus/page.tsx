@@ -40,8 +40,50 @@ export default function MenuManagementPage() {
   })
 
   useEffect(() => {
-    loadMenus()
+    // Check if in demo mode
+    const urlParams = new URLSearchParams(window.location.search)
+    const isDemoMode = urlParams.get('demo') === 'true' || localStorage.getItem('authMode') === 'demo'
+
+    if (isDemoMode) {
+      loadDemoMenus()
+    } else {
+      loadMenus()
+    }
   }, [])
+
+  function loadDemoMenus() {
+    // Demo data
+    const demoMenus: Menu[] = [
+      {
+        id: 'demo-1',
+        title: "Chef Maria's Friday Special",
+        date: new Date().toISOString(),
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        menuItems: [
+          { name: 'Grilled Salmon', description: 'With lemon herbs and roasted vegetables', price: 2400, category: 'main', isAvailable: true },
+          { name: 'Pasta Primavera', description: 'Fresh seasonal vegetables in garlic sauce', price: 1800, category: 'main', isAvailable: true },
+          { name: 'Caesar Salad', description: 'Crispy romaine with house-made dressing', price: 1200, category: 'appetizer', isAvailable: true },
+          { name: 'Tiramisu', description: 'Classic Italian dessert', price: 800, category: 'dessert', isAvailable: true },
+        ]
+      },
+      {
+        id: 'demo-2',
+        title: "Today's Fresh Selections",
+        date: new Date(Date.now() - 86400000).toISOString(),
+        isActive: false,
+        createdAt: new Date(Date.now() - 86400000).toISOString(),
+        menuItems: [
+          { name: 'BBQ Chicken', description: 'Slow-cooked with signature sauce', price: 1600, category: 'main', isAvailable: true },
+          { name: 'Greek Salad', description: 'Feta, olives, and fresh vegetables', price: 1000, category: 'appetizer', isAvailable: true },
+          { name: 'Garlic Bread', description: 'Toasted with herb butter', price: 600, category: 'side', isAvailable: true },
+        ]
+      }
+    ]
+
+    setMenus(demoMenus)
+    setLoading(false)
+  }
 
   async function loadMenus() {
     try {

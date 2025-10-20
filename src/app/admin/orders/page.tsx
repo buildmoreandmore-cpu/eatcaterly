@@ -21,8 +21,26 @@ export default function OrdersPage() {
   const [filter, setFilter] = useState('all')
 
   useEffect(() => {
-    loadOrders()
+    const urlParams = new URLSearchParams(window.location.search)
+    const isDemoMode = urlParams.get('demo') === 'true' || (typeof window !== 'undefined' && localStorage.getItem('authMode') === 'demo')
+
+    if (isDemoMode) {
+      loadDemoOrders()
+    } else {
+      loadOrders()
+    }
   }, [])
+
+  function loadDemoOrders() {
+    const demoOrders: Order[] = [
+      { id: '1', customer: { name: 'John Smith', phoneNumber: '470-555-8812' }, items: {}, totalAmount: 4200, status: 'CONFIRMED', createdAt: new Date(Date.now() - 3600000).toISOString() },
+      { id: '2', customer: { name: 'Sarah Johnson', phoneNumber: '470-555-0747' }, items: {}, totalAmount: 3000, status: 'PAID', createdAt: new Date(Date.now() - 7200000).toISOString() },
+      { id: '3', customer: { name: 'Mike Davis', phoneNumber: '678-555-0123' }, items: {}, totalAmount: 2400, status: 'PREPARING', createdAt: new Date(Date.now() - 1800000).toISOString() },
+      { id: '4', customer: { name: 'Emily Wilson', phoneNumber: '404-555-0156' }, items: {}, totalAmount: 1800, status: 'READY', createdAt: new Date(Date.now() - 900000).toISOString() },
+    ]
+    setOrders(demoOrders)
+    setLoading(false)
+  }
 
   async function loadOrders() {
     try {

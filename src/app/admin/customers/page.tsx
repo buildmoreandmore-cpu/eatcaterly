@@ -19,8 +19,27 @@ export default function CustomersPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    loadCustomers()
+    const urlParams = new URLSearchParams(window.location.search)
+    const isDemoMode = urlParams.get('demo') === 'true' || (typeof window !== 'undefined' && localStorage.getItem('authMode') === 'demo')
+
+    if (isDemoMode) {
+      loadDemoCustomers()
+    } else {
+      loadCustomers()
+    }
   }, [])
+
+  function loadDemoCustomers() {
+    const demoCustomers: Customer[] = [
+      { id: '1', name: 'John Smith', phoneNumber: '470-555-8812', email: 'john.smith@email.com', isActive: true, totalOrders: 9, totalSpent: 14850, createdAt: new Date(Date.now() - 2592000000).toISOString() },
+      { id: '2', name: 'Sarah Johnson', phoneNumber: '470-555-0747', email: 'sarah.j@email.com', isActive: true, totalOrders: 6, totalSpent: 8700, createdAt: new Date(Date.now() - 1728000000).toISOString() },
+      { id: '3', name: 'Mike Davis', phoneNumber: '678-555-0123', email: 'mike.d@email.com', isActive: true, totalOrders: 4, totalSpent: 5000, createdAt: new Date(Date.now() - 864000000).toISOString() },
+      { id: '4', name: 'Emily Wilson', phoneNumber: '404-555-0156', email: 'emily.w@email.com', isActive: true, totalOrders: 4, totalSpent: 5000, createdAt: new Date(Date.now() - 604800000).toISOString() },
+      { id: '5', name: 'Robert Martinez', phoneNumber: '404-555-0234', email: null, isActive: true, totalOrders: 5, totalSpent: 7250, createdAt: new Date(Date.now() - 1209600000).toISOString() },
+    ]
+    setCustomers(demoCustomers)
+    setLoading(false)
+  }
 
   async function loadCustomers() {
     try {

@@ -1,8 +1,21 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 export default function Hero() {
+  const router = useRouter()
+
+  const handleViewDemo = () => {
+    // Set demo mode in localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('authMode', 'demo')
+      localStorage.setItem('isAuthenticated', 'true')
+    }
+    // Navigate to admin dashboard in demo mode
+    router.push('/admin?demo=true')
+  }
+
   return (
     <section className="bg-gradient-to-br from-orange-50 to-white py-20 lg:py-32">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -28,8 +41,11 @@ export default function Hero() {
               >
                 Get Started Free
               </Link>
-              <button className="border border-gray-300 text-gray-700 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gray-50 transition-colors">
-                Watch Demo
+              <button
+                onClick={handleViewDemo}
+                className="border border-gray-300 text-gray-700 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gray-50 transition-colors"
+              >
+                View Demo
               </button>
             </div>
 

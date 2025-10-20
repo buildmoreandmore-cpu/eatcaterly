@@ -21,12 +21,29 @@ export default function SMSLogsPage() {
   const [filter, setFilter] = useState('all')
 
   useEffect(() => {
-    // Mock empty data - replace with actual API
-    setTimeout(() => {
-      setLogs([])
-      setLoading(false)
-    }, 500)
+    const urlParams = new URLSearchParams(window.location.search)
+    const isDemoMode = urlParams.get('demo') === 'true' || (typeof window !== 'undefined' && localStorage.getItem('authMode') === 'demo')
+
+    if (isDemoMode) {
+      loadDemoLogs()
+    } else {
+      setTimeout(() => {
+        setLogs([])
+        setLoading(false)
+      }, 500)
+    }
   }, [])
+
+  function loadDemoLogs() {
+    const demoLogs: SmsLog[] = [
+      { id: '1', direction: 'OUTBOUND', message: "Today's menu: Grilled Salmon $24, Pasta Primavera $18, Caesar Salad $12. Reply with your order!", status: 'DELIVERED', customer: { name: 'John Smith', phoneNumber: '470-555-8812' }, createdAt: new Date(Date.now() - 3600000).toISOString() },
+      { id: '2', direction: 'INBOUND', message: 'I would like 1 Grilled Salmon and 1 Caesar Salad', status: 'RECEIVED', customer: { name: 'John Smith', phoneNumber: '470-555-8812' }, createdAt: new Date(Date.now() - 3300000).toISOString() },
+      { id: '3', direction: 'OUTBOUND', message: 'Thanks! Your order total is $36. Payment link: https://pay.eatcaterly.com/abc123', status: 'DELIVERED', customer: { name: 'John Smith', phoneNumber: '470-555-8812' }, createdAt: new Date(Date.now() - 3000000).toISOString() },
+      { id: '4', direction: 'OUTBOUND', message: "Hi! Here's today's fresh menu. Text back to order!", status: 'DELIVERED', customer: { name: 'Sarah Johnson', phoneNumber: '470-555-0747' }, createdAt: new Date(Date.now() - 7200000).toISOString() },
+    ]
+    setLogs(demoLogs)
+    setLoading(false)
+  }
 
   const statusColors: Record<string, string> = {
     SENT: 'bg-blue-100 text-blue-800',
