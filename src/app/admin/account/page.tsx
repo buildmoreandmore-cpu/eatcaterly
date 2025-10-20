@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { useUser } from '@clerk/nextjs'
+import { checkIsAdminEmail } from '@/lib/auth-utils'
+import Link from 'next/link'
+import { Crown, Building2, Phone, Users, TrendingUp } from 'lucide-react'
 
 interface SubscriptionItem {
   description: string
@@ -40,11 +43,21 @@ export default function BusinessAccountPage() {
   const [cancelLoading, setCancelLoading] = useState(false)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
   const [businessId, setBusinessId] = useState<string | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
     // Wait for Clerk to load, then proceed with or without user
     if (isLoaded) {
-      loadBusinessAndAccountData()
+      const userEmail = user?.emailAddresses[0]?.emailAddress
+      const adminStatus = checkIsAdminEmail(userEmail)
+      setIsAdmin(adminStatus)
+
+      // Only load business data if not admin
+      if (!adminStatus) {
+        loadBusinessAndAccountData()
+      } else {
+        setLoading(false)
+      }
     }
   }, [isLoaded, user])
 
@@ -71,21 +84,20 @@ export default function BusinessAccountPage() {
           const businessRes = await fetch(`/api/business/me?email=${encodeURIComponent(email)}`)
           if (!businessRes.ok) {
             const businessData = await businessRes.json()
-            setError(businessData.error || 'Failed to load business details')
+            setError(businessData.error || 'No business account found. Please complete onboarding first.')
             return
           }
 
           const businessData = await businessRes.json()
           if (!businessData.success || !businessData.businessId) {
-            setError('No business found for your account')
+            setError('No business account found. Please complete onboarding first.')
             return
           }
 
           currentBusinessId = businessData.businessId
           setBusinessId(currentBusinessId)
         } else {
-          // No email and no businessId - try to get the most recent business (for testing)
-          setError('Please provide a businessId parameter or sign in with Clerk')
+          setError('Please sign in to view account details')
           return
         }
       }
@@ -151,13 +163,105 @@ export default function BusinessAccountPage() {
     )
   }
 
+  // Platform Admin View
+  if (isAdmin) {
+    return (
+      <div className="p-8">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-3xl font-bold mb-8">Platform Admin Account</h1>
+
+          {/* Admin Badge */}
+          <section className="bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200 rounded-lg p-6 mb-6">
+            <div className="flex items-center gap-3 mb-4">
+              <Crown className="h-8 w-8 text-purple-600" />
+              <div>
+                <h2 className="text-2xl font-bold text-purple-900">Platform Administrator</h2>
+                <p className="text-purple-700">Full platform access and management</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+              <div className="bg-white rounded-lg p-4">
+                <div className="text-sm text-gray-600 mb-1">Email</div>
+                <div className="font-semibold text-gray-900">{user?.emailAddresses[0]?.emailAddress}</div>
+              </div>
+              <div className="bg-white rounded-lg p-4">
+                <div className="text-sm text-gray-600 mb-1">Role</div>
+                <div className="font-semibold text-purple-700">Platform Administrator</div>
+              </div>
+            </div>
+          </section>
+
+          {/* Admin Features */}
+          <section className="bg-white border rounded-lg p-6 mb-6">
+            <h2 className="text-xl font-semibold mb-4">Platform Management</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Link href="/admin" className="group">
+                <div className="border border-gray-200 rounded-lg p-4 hover:border-purple-500 hover:shadow-md transition-all cursor-pointer">
+                  <TrendingUp className="h-6 w-6 text-purple-600 mb-2" />
+                  <div className="font-semibold text-gray-900 group-hover:text-purple-700">Platform Analytics</div>
+                  <div className="text-sm text-gray-500">View platform-wide statistics and metrics</div>
+                </div>
+              </Link>
+              <Link href="/admin/businesses" className="group">
+                <div className="border border-gray-200 rounded-lg p-4 hover:border-purple-500 hover:shadow-md transition-all cursor-pointer">
+                  <Building2 className="h-6 w-6 text-blue-600 mb-2" />
+                  <div className="font-semibold text-gray-900 group-hover:text-purple-700">Manage Businesses</div>
+                  <div className="text-sm text-gray-500">View and manage all customer accounts</div>
+                </div>
+              </Link>
+              <Link href="/admin/phone-inventory" className="group">
+                <div className="border border-gray-200 rounded-lg p-4 hover:border-purple-500 hover:shadow-md transition-all cursor-pointer">
+                  <Phone className="h-6 w-6 text-green-600 mb-2" />
+                  <div className="font-semibold text-gray-900 group-hover:text-purple-700">Phone Inventory</div>
+                  <div className="text-sm text-gray-500">Manage A2P phone number pool</div>
+                </div>
+              </Link>
+              <Link href="/admin/promo-codes" className="group">
+                <div className="border border-gray-200 rounded-lg p-4 hover:border-purple-500 hover:shadow-md transition-all cursor-pointer">
+                  <Users className="h-6 w-6 text-orange-600 mb-2" />
+                  <div className="font-semibold text-gray-900 group-hover:text-purple-700">Promo Codes</div>
+                  <div className="text-sm text-gray-500">Create and manage promotional offers</div>
+                </div>
+              </Link>
+            </div>
+          </section>
+
+          {/* Admin Info */}
+          <section className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <h3 className="font-semibold text-blue-900 mb-2">Administrator Notes</h3>
+            <ul className="text-sm text-blue-800 space-y-2">
+              <li>• You have full access to all platform features and data</li>
+              <li>• Platform admins do not require a business account subscription</li>
+              <li>• Use the navigation menu to access all admin-only features</li>
+              <li>• To test the business customer experience, create a test account with a different email</li>
+            </ul>
+          </section>
+        </div>
+      </div>
+    )
+  }
+
+  // Business Customer Error View
   if (error) {
     return (
       <div className="p-8">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-3xl font-bold mb-8">Account Settings</h1>
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-            Error: {error}
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <p className="text-red-700 font-semibold mb-2">Account Not Found</p>
+            <p className="text-red-600 text-sm">{error}</p>
+          </div>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <h3 className="font-semibold text-blue-900 mb-2">Need to get started?</h3>
+            <p className="text-blue-800 text-sm mb-4">
+              If you haven't completed the onboarding process yet, you'll need to set up your business account first.
+            </p>
+            <Link
+              href="/onboarding"
+              className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition-colors"
+            >
+              Complete Onboarding
+            </Link>
           </div>
         </div>
       </div>
