@@ -4,6 +4,8 @@ import { prisma } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
 
+const ADMIN_EMAIL = 'eatcaterly@gmail.com'
+
 export default async function AuthCallbackPage() {
   try {
     // Get the current authenticated user
@@ -22,6 +24,12 @@ export default async function AuthCallbackPage() {
     if (!userEmail) {
       // No email found, something went wrong
       redirect('/sign-in')
+    }
+
+    // Check if this is the platform admin
+    if (userEmail === ADMIN_EMAIL) {
+      // Platform admin always goes to admin dashboard
+      redirect('/admin')
     }
 
     // Check if this user has a business account in the database
