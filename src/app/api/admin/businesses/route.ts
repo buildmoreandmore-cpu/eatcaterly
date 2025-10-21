@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db'
-
-const ADMIN_EMAIL = 'eatcaterly@gmail.com'
+import { isAdmin } from '@/lib/auth-utils.server'
 
 /**
  * GET /api/admin/businesses
@@ -11,10 +9,9 @@ const ADMIN_EMAIL = 'eatcaterly@gmail.com'
 export async function GET(req: NextRequest) {
   try {
     // Verify admin authentication
-    const { sessionClaims } = await auth()
-    const userEmail = sessionClaims?.email as string
+    const userIsAdmin = await isAdmin()
 
-    if (userEmail !== ADMIN_EMAIL) {
+    if (!userIsAdmin) {
       return NextResponse.json(
         { error: 'Unauthorized. Admin access only.' },
         { status: 403 }

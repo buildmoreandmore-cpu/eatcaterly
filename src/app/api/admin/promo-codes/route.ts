@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db'
-
-const ADMIN_USER_ID = 'user_34AyHh3kVYM0kr5LBYkf1phUrLu'
+import { isAdmin } from '@/lib/auth-utils.server'
 
 /**
  * GET /api/admin/promo-codes
@@ -10,9 +8,9 @@ const ADMIN_USER_ID = 'user_34AyHh3kVYM0kr5LBYkf1phUrLu'
  */
 export async function GET(req: NextRequest) {
   try {
-    const { userId } = await auth()
+    const userIsAdmin = await isAdmin()
 
-    if (userId !== ADMIN_USER_ID) {
+    if (!userIsAdmin) {
       return NextResponse.json(
         { error: 'Unauthorized. Admin access only.' },
         { status: 403 }
@@ -49,9 +47,9 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
-    const { userId } = await auth()
+    const userIsAdmin = await isAdmin()
 
-    if (userId !== ADMIN_USER_ID) {
+    if (!userIsAdmin) {
       return NextResponse.json(
         { error: 'Unauthorized. Admin access only.' },
         { status: 403 }
@@ -130,9 +128,9 @@ export async function POST(req: NextRequest) {
  */
 export async function PUT(req: NextRequest) {
   try {
-    const { userId } = await auth()
+    const userIsAdmin = await isAdmin()
 
-    if (userId !== ADMIN_USER_ID) {
+    if (!userIsAdmin) {
       return NextResponse.json(
         { error: 'Unauthorized. Admin access only.' },
         { status: 403 }
