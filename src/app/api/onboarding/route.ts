@@ -8,6 +8,8 @@ export async function POST(request: NextRequest) {
   try {
     const { zipCode, businessName, contactEmail, contactName, clerkUserId } = await request.json()
 
+    console.log('[Onboarding] Request received:', { zipCode, businessName, contactEmail, contactName })
+
     // Validate required fields
     if (!zipCode || !businessName || !contactEmail || !contactName) {
       return NextResponse.json(
@@ -164,11 +166,16 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('Onboarding error:', error)
+    console.error('[Onboarding] Unhandled error:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+      cause: error.cause
+    })
     return NextResponse.json(
       {
         success: false,
-        error: error.message || 'Failed to complete onboarding'
+        error: error.message || 'Failed to complete onboarding. Please try again or contact support.'
       },
       { status: 500 }
     )
