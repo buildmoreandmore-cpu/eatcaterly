@@ -375,38 +375,38 @@ export default async function AdminDashboard() {
       {/* Page Header */}
       <div className="md:flex md:items-center md:justify-between">
         <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-bold leading-7 text-gray-900 sm:truncate sm:text-3xl sm:tracking-tight">
+          <h1 className="text-xl font-bold leading-7 text-gray-900 sm:text-2xl lg:text-3xl sm:tracking-tight">
             Platform Analytics
           </h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-xs sm:text-sm text-gray-500">
             Monitor your EatCaterly platform performance and business health
           </p>
         </div>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {statsCards.map((stat) => {
           const Icon = stat.icon
           return (
             <Link key={stat.title} href={stat.href}>
               <div className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow cursor-pointer">
-                <div className="p-5">
+                <div className="p-4 sm:p-5">
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
-                      <div className={`p-3 rounded-md ${stat.color}`}>
-                        <Icon className="h-6 w-6" />
+                      <div className={`p-2 sm:p-3 rounded-md ${stat.color}`}>
+                        <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
                       </div>
                     </div>
-                    <div className="ml-5 w-0 flex-1">
+                    <div className="ml-3 sm:ml-5 w-0 flex-1">
                       <dl>
-                        <dt className="text-sm font-medium text-gray-500 truncate">
+                        <dt className="text-xs sm:text-sm font-medium text-gray-500 truncate">
                           {stat.title}
                         </dt>
-                        <dd className="text-lg font-medium text-gray-900">
+                        <dd className="text-base sm:text-lg font-medium text-gray-900">
                           {stat.value}
                         </dd>
-                        <dd className="text-sm text-gray-500">
+                        <dd className="text-xs sm:text-sm text-gray-500">
                           {stat.subtitle}
                         </dd>
                       </dl>
@@ -420,44 +420,44 @@ export default async function AdminDashboard() {
       </div>
 
       {/* Subscription Health */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="bg-white shadow rounded-lg p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
+        <div className="bg-white shadow rounded-lg p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-4">
             Subscription Health
           </h3>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-                <span className="text-sm font-medium text-gray-900">Active</span>
+                <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 mr-2" />
+                <span className="text-xs sm:text-sm font-medium text-gray-900">Active</span>
               </div>
-              <span className="text-2xl font-bold text-green-600">
+              <span className="text-xl sm:text-2xl font-bold text-green-600">
                 {stats.activeSubscriptions}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <Clock className="h-5 w-5 text-blue-600 mr-2" />
-                <span className="text-sm font-medium text-gray-900">Trial</span>
+                <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 mr-2" />
+                <span className="text-xs sm:text-sm font-medium text-gray-900">Trial</span>
               </div>
-              <span className="text-2xl font-bold text-blue-600">
+              <span className="text-xl sm:text-2xl font-bold text-blue-600">
                 {stats.trialSubscriptions}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <XCircle className="h-5 w-5 text-red-600 mr-2" />
-                <span className="text-sm font-medium text-gray-900">Cancelled</span>
+                <XCircle className="h-4 w-4 sm:h-5 sm:w-5 text-red-600 mr-2" />
+                <span className="text-xs sm:text-sm font-medium text-gray-900">Cancelled</span>
               </div>
-              <span className="text-2xl font-bold text-red-600">
+              <span className="text-xl sm:text-2xl font-bold text-red-600">
                 {stats.cancelledSubscriptions}
               </span>
             </div>
             {stats.cancelledSubscriptions > 0 && stats.totalBusinesses > 0 && (
               <div className="pt-4 border-t border-gray-200">
                 <div className="flex items-center">
-                  <AlertCircle className="h-5 w-5 text-yellow-600 mr-2" />
-                  <span className="text-sm text-gray-600">
+                  <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-600 mr-2" />
+                  <span className="text-xs sm:text-sm text-gray-600">
                     Churn rate: {((stats.cancelledSubscriptions / stats.totalBusinesses) * 100).toFixed(1)}%
                   </span>
                 </div>
@@ -466,34 +466,34 @@ export default async function AdminDashboard() {
           </div>
         </div>
 
-        <div className="bg-white shadow rounded-lg p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">
+        <div className="bg-white shadow rounded-lg p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-4">
             Phone Inventory Status
           </h3>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-900">Total Numbers</span>
-              <span className="text-2xl font-bold text-gray-900">
+              <span className="text-xs sm:text-sm font-medium text-gray-900">Total Numbers</span>
+              <span className="text-xl sm:text-2xl font-bold text-gray-900">
                 {stats.phoneNumbersTotal}
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-900">Available</span>
-              <span className="text-2xl font-bold text-green-600">
+              <span className="text-xs sm:text-sm font-medium text-gray-900">Available</span>
+              <span className="text-xl sm:text-2xl font-bold text-green-600">
                 {stats.phoneNumbersAvailable}
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-900">Assigned</span>
-              <span className="text-2xl font-bold text-blue-600">
+              <span className="text-xs sm:text-sm font-medium text-gray-900">Assigned</span>
+              <span className="text-xl sm:text-2xl font-bold text-blue-600">
                 {stats.phoneNumbersAssigned}
               </span>
             </div>
             {stats.phoneNumbersAvailable < 5 && (
               <div className="pt-4 border-t border-gray-200">
                 <div className="flex items-center">
-                  <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
-                  <span className="text-sm text-red-600 font-medium">
+                  <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-red-600 mr-2" />
+                  <span className="text-xs sm:text-sm text-red-600 font-medium">
                     Low inventory! Order more numbers
                   </span>
                 </div>
@@ -505,14 +505,14 @@ export default async function AdminDashboard() {
 
       {/* Recent Business Activity */}
       <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
+        <div className="px-4 py-4 sm:py-5 sm:px-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg leading-6 font-medium text-gray-900">
+            <h3 className="text-base sm:text-lg leading-6 font-medium text-gray-900">
               Recent Business Activity
             </h3>
             <Link
               href="/admin/businesses"
-              className="text-sm font-medium text-blue-600 hover:text-blue-700"
+              className="text-xs sm:text-sm font-medium text-blue-600 hover:text-blue-700"
             >
               View all →
             </Link>
@@ -522,68 +522,70 @@ export default async function AdminDashboard() {
               No businesses yet. Waiting for first signup!
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Business
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Tier
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Orders
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Activity
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Joined
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {recentActivity.map((business) => (
-                    <tr key={business.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex flex-col">
-                          <div className="text-sm font-medium text-gray-900">
-                            {business.businessName}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {business.contactEmail}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadge(
-                            business.subscriptionStatus
-                          )}`}
-                        >
-                          {business.subscriptionStatus}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {business.subscriptionTier || '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {business.totalOrders}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {getActivityScore(business)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {business.createdAt.toLocaleDateString()}
-                      </td>
+            <div className="overflow-x-auto -mx-4 sm:mx-0">
+              <div className="inline-block min-w-full align-middle">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Business
+                      </th>
+                      <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="hidden md:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Tier
+                      </th>
+                      <th className="hidden lg:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Orders
+                      </th>
+                      <th className="hidden lg:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Activity
+                      </th>
+                      <th className="hidden sm:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Joined
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {recentActivity.map((business) => (
+                      <tr key={business.id} className="hover:bg-gray-50">
+                        <td className="px-3 sm:px-6 py-4">
+                          <div className="flex flex-col">
+                            <div className="text-xs sm:text-sm font-medium text-gray-900 truncate max-w-[150px] sm:max-w-none">
+                              {business.businessName}
+                            </div>
+                            <div className="text-xs text-gray-500 truncate max-w-[150px] sm:max-w-none">
+                              {business.contactEmail}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
+                          <span
+                            className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadge(
+                              business.subscriptionStatus
+                            )}`}
+                          >
+                            {business.subscriptionStatus}
+                          </span>
+                        </td>
+                        <td className="hidden md:table-cell px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {business.subscriptionTier || '-'}
+                        </td>
+                        <td className="hidden lg:table-cell px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {business.totalOrders}
+                        </td>
+                        <td className="hidden lg:table-cell px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {getActivityScore(business)}
+                        </td>
+                        <td className="hidden sm:table-cell px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {business.createdAt.toLocaleDateString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>
@@ -591,37 +593,37 @@ export default async function AdminDashboard() {
 
       {/* Quick Actions */}
       <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
+        <div className="px-4 py-4 sm:py-5 sm:px-6">
+          <h3 className="text-base sm:text-lg leading-6 font-medium text-gray-900 mb-4">
             Admin Quick Actions
           </h3>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Link href="/admin/businesses">
-              <div className="border border-gray-200 rounded-lg p-4 hover:border-blue-500 hover:shadow-sm transition-all cursor-pointer">
-                <Building2 className="h-6 w-6 text-blue-600 mb-2" />
-                <div className="font-medium text-gray-900">Manage Businesses</div>
-                <div className="text-sm text-gray-500">View all customer accounts</div>
+              <div className="border border-gray-200 rounded-lg p-3 sm:p-4 hover:border-blue-500 hover:shadow-sm transition-all cursor-pointer">
+                <Building2 className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 mb-2" />
+                <div className="text-sm sm:text-base font-medium text-gray-900">Manage Businesses</div>
+                <div className="text-xs sm:text-sm text-gray-500">View all customer accounts</div>
               </div>
             </Link>
             <Link href="/admin/phone-inventory">
-              <div className="border border-gray-200 rounded-lg p-4 hover:border-blue-500 hover:shadow-sm transition-all cursor-pointer">
-                <Phone className="h-6 w-6 text-indigo-600 mb-2" />
-                <div className="font-medium text-gray-900">Phone Inventory</div>
-                <div className="text-sm text-gray-500">Manage phone numbers</div>
+              <div className="border border-gray-200 rounded-lg p-3 sm:p-4 hover:border-blue-500 hover:shadow-sm transition-all cursor-pointer">
+                <Phone className="h-5 w-5 sm:h-6 sm:w-6 text-indigo-600 mb-2" />
+                <div className="text-sm sm:text-base font-medium text-gray-900">Phone Inventory</div>
+                <div className="text-xs sm:text-sm text-gray-500">Manage phone numbers</div>
               </div>
             </Link>
             <Link href="/admin/promo-codes">
-              <div className="border border-gray-200 rounded-lg p-4 hover:border-blue-500 hover:shadow-sm transition-all cursor-pointer">
-                <TrendingUp className="h-6 w-6 text-green-600 mb-2" />
-                <div className="font-medium text-gray-900">Promo Codes</div>
-                <div className="text-sm text-gray-500">Create special offers</div>
+              <div className="border border-gray-200 rounded-lg p-3 sm:p-4 hover:border-blue-500 hover:shadow-sm transition-all cursor-pointer">
+                <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 text-green-600 mb-2" />
+                <div className="text-sm sm:text-base font-medium text-gray-900">Promo Codes</div>
+                <div className="text-xs sm:text-sm text-gray-500">Create special offers</div>
               </div>
             </Link>
             <Link href="/admin/account">
-              <div className="border border-gray-200 rounded-lg p-4 hover:border-blue-500 hover:shadow-sm transition-all cursor-pointer">
-                <Users className="h-6 w-6 text-purple-600 mb-2" />
-                <div className="font-medium text-gray-900">My Account</div>
-                <div className="text-sm text-gray-500">View your business account</div>
+              <div className="border border-gray-200 rounded-lg p-3 sm:p-4 hover:border-blue-500 hover:shadow-sm transition-all cursor-pointer">
+                <Users className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600 mb-2" />
+                <div className="text-sm sm:text-base font-medium text-gray-900">My Account</div>
+                <div className="text-xs sm:text-sm text-gray-500">View your business account</div>
               </div>
             </Link>
           </div>

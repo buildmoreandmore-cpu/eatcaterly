@@ -15,7 +15,9 @@ import {
   LogOut,
   Building2,
   Phone,
-  Ticket
+  Ticket,
+  Menu,
+  X
 } from 'lucide-react'
 import { checkIsAdminEmail } from '@/lib/auth-utils'
 
@@ -26,6 +28,7 @@ interface AdminLayoutProps {
 function AdminLayoutContent({ children }: AdminLayoutProps) {
   const pathname = usePathname()
   const [isInDemoMode, setIsInDemoMode] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   const hasClerkKeys = typeof window !== 'undefined' &&
     process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
@@ -107,13 +110,31 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* Sidebar */}
-      <div className="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg">
-        <div className="flex h-16 items-center justify-center border-b border-gray-200">
-          <h1 className="text-xl font-bold text-gray-900">SMS Food Admin</h1>
+      {/* Mobile menu overlay */}
+      {isMobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black bg-opacity-50 lg:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar - responsive */}
+      <div className={`
+        fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out
+        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
+        lg:translate-x-0
+      `}>
+        <div className="flex h-16 items-center justify-between px-4 border-b border-gray-200">
+          <h1 className="text-lg font-bold text-gray-900">SMS Food Admin</h1>
+          <button
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="lg:hidden p-2 rounded-md text-gray-600 hover:bg-gray-100"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
-        <nav className="mt-6 px-4">
+        <nav className="mt-6 px-4 pb-20 overflow-y-auto" style={{ height: 'calc(100vh - 8rem)' }}>
           <ul className="space-y-2">
             {filteredNavigation.map((item) => {
               const Icon = item.icon
@@ -124,6 +145,7 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
                 <li key={item.name}>
                   <Link
                     href={href}
+                    onClick={() => setIsMobileMenuOpen(false)}
                     className={`flex items-center rounded-lg px-3 py-2 text-sm font-medium ${
                       isActive
                         ? 'bg-blue-100 text-blue-900'
@@ -139,7 +161,7 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
           </ul>
         </nav>
 
-        <div className="absolute bottom-0 w-full p-4">
+        <div className="absolute bottom-0 w-full p-4 bg-white border-t border-gray-200">
           <button
             onClick={handleLogout}
             className="flex w-full items-center rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
@@ -151,25 +173,33 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
       </div>
 
       {/* Main content */}
-      <div className="pl-64">
+      <div className="lg:pl-64">
         {/* Top bar */}
-        <header className="bg-white shadow-sm border-b border-gray-200">
-          <div className="flex h-16 items-center justify-between px-6">
-            <h2 className="text-lg font-semibold text-gray-900">
-              EatCaterly Admin {isDemoMode && <span className="text-yellow-600">(Demo)</span>}
-            </h2>
-            <div className="flex items-center space-x-4">
+        <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-30">
+          <div className="flex h-16 items-center justify-between px-4 lg:px-6">
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => setIsMobileMenuOpen(true)}
+                className="lg:hidden p-2 rounded-md text-gray-600 hover:bg-gray-100"
+              >
+                <Menu className="h-6 w-6" />
+              </button>
+              <h2 className="text-base lg:text-lg font-semibold text-gray-900">
+                EatCaterly Admin {isDemoMode && <span className="text-yellow-600">(Demo)</span>}
+              </h2>
+            </div>
+            <div className="flex items-center space-x-2 lg:space-x-4">
               {!isDemoMode && user && (
-                <div className="flex items-center space-x-3">
-                  <span className="text-sm text-gray-600">
+                <div className="flex items-center space-x-2 lg:space-x-3">
+                  <span className="hidden sm:inline text-sm text-gray-600">
                     {(user as any).emailAddresses?.[0]?.emailAddress || ''}
                   </span>
                   <UserButton afterSignOutUrl="/" />
                 </div>
               )}
               {isDemoMode && (
-                <span className="text-sm text-gray-500">
-                  Demo User - {new Date().toLocaleDateString()}
+                <span className="text-xs lg:text-sm text-gray-500">
+                  Demo User
                 </span>
               )}
             </div>
@@ -177,7 +207,7 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
         </header>
 
         {/* Page content */}
-        <main className="p-6">
+        <main className="p-4 lg:p-6">
           {children}
         </main>
       </div>
