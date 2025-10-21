@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: `Zip code ${zipCode} is not currently supported. We serve the Atlanta metro area.`
+          error: `Unable to find area code for zip code ${zipCode}. Please verify your zip code and try again.`
         },
         { status: 400 }
       )

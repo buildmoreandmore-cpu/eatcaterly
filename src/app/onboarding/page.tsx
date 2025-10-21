@@ -346,13 +346,13 @@ export default function OnboardingPage() {
                 name="zipCode"
                 value={formData.zipCode}
                 onChange={handleChange}
-                placeholder="30309"
+                placeholder="90210"
                 maxLength={5}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-center text-lg"
                 required
               />
               <p className="text-xs text-gray-500 mt-1">
-                We serve the Atlanta metro area (404, 470, 678, 770)
+                We'll assign you a local phone number for your area
               </p>
             </div>
 
