@@ -3,7 +3,7 @@
  * Handles phone number provisioning and management
  */
 
-const EZ_TEXTING_API_URL = process.env.EZ_TEXTING_API_URL || 'https://api.eztexting.com/v2'
+const EZ_TEXTING_API_URL = process.env.EZ_TEXTING_API_URL || 'https://app.eztexting.com/api'
 const EZ_TEXTING_API_KEY = process.env.EZ_TEXTING_API_KEY
 
 // Atlanta area code fallbacks (404 → 470 → 678 → 770)
