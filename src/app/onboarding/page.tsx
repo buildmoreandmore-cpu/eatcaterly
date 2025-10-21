@@ -1,8 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useUser, useClerk } from '@clerk/nextjs'
+
+const ADMIN_EMAIL = 'eatcaterly@gmail.com'
 
 interface OnboardingResult {
   success: boolean
@@ -23,6 +25,19 @@ export default function OnboardingPage() {
   const router = useRouter()
   const { user, isLoaded } = useUser()
   const { signOut } = useClerk()
+
+  // Redirect admin users to admin dashboard
+  useEffect(() => {
+    if (isLoaded && user) {
+      const userEmail = user.emailAddresses.find(
+        email => email.id === user.primaryEmailAddressId
+      )?.emailAddress?.toLowerCase().trim()
+
+      if (userEmail === ADMIN_EMAIL.toLowerCase().trim()) {
+        router.push('/admin')
+      }
+    }
+  }, [isLoaded, user, router])
 
   const [formData, setFormData] = useState({
     businessName: '',
