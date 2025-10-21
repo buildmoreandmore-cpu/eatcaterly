@@ -41,7 +41,7 @@ export default async function AuthCallbackPage() {
     if (normalizedUserEmail === normalizedAdminEmail) {
       console.log('[Auth Callback] Admin email detected, redirecting to /admin')
       // Platform admin always goes to admin dashboard
-      redirect('/admin')
+      return redirect('/admin')
     }
 
     // Check if this user has a business account in the database
