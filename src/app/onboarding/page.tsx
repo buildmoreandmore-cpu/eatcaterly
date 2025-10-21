@@ -166,15 +166,21 @@ export default function OnboardingPage() {
   }
 
   const handleContinue = () => {
-    // Pass promo code data to plan selection page
+    // Pass business ID and promo code data to plan selection page
     const params = new URLSearchParams()
+
+    // Always pass businessId if available
+    if (result?.data?.businessId) {
+      params.set('businessId', result.data.businessId)
+    }
+
+    // Pass promo code if valid
     if (promoValid && promoData) {
       params.set('promoCode', formData.promoCode)
       params.set('promoId', promoData.id)
-      router.push(`/onboarding/plan?${params.toString()}`)
-    } else {
-      router.push('/onboarding/plan')
     }
+
+    router.push(`/onboarding/plan?${params.toString()}`)
   }
 
   // Skip loading check for testing without authentication
