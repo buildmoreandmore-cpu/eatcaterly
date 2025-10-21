@@ -10,6 +10,25 @@ export async function POST(request: NextRequest) {
 
     console.log('[Onboarding] Request received:', { zipCode, businessName, contactEmail, contactName })
 
+    // Test database connection first
+    try {
+      await prisma.$queryRaw`SELECT 1`
+      console.log('[Onboarding] Database connection successful')
+    } catch (dbError: any) {
+      console.error('[Onboarding] Database connection failed:', {
+        message: dbError.message,
+        code: dbError.code,
+        meta: dbError.meta
+      })
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Database connection error. Please try again in a moment.'
+        },
+        { status: 500 }
+      )
+    }
+
     // Validate required fields
     if (!zipCode || !businessName || !contactEmail || !contactName) {
       return NextResponse.json(
@@ -34,9 +53,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if customer already exists with this email
+    console.log('[Onboarding] Checking for existing customer:', contactEmail)
     const existingCustomer = await prisma.businessCustomer.findUnique({
       where: { contactEmail }
     })
+    console.log('[Onboarding] Existing customer check complete:', existingCustomer ? 'Found' : 'Not found')
 
     if (existingCustomer) {
       // If they already have a phone number assigned, return it
