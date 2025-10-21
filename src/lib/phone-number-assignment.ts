@@ -780,7 +780,7 @@ const ZIP_PREFIX_TO_AREA_CODE: Record<string, { areaCode: string; state: string;
   '835': { areaCode: '208', state: 'ID', region: 'Lewiston' },
   '836': { areaCode: '208', state: 'ID', region: 'Boise' },
   '837': { areaCode: '208', state: 'ID', region: 'Boise' },
-  '838': { areaCode: '208', state: 'ID', region: 'Coeur d''Alene' },
+  '838': { areaCode: '208', state: 'ID', region: 'Coeur d\'Alene' },
 
   // Utah (84x-84x)
   '840': { areaCode: '801', state: 'UT', region: 'Salt Lake City' },
