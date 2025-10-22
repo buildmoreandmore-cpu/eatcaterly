@@ -26,15 +26,33 @@ export default function OnboardingPage() {
   const { user, isLoaded } = useUser()
   const { signOut } = useClerk()
 
-  // Redirect admin users to admin dashboard
+  // Redirect admin users and users who already completed onboarding
   useEffect(() => {
     if (isLoaded && user) {
       const userEmail = user.emailAddresses.find(
         email => email.id === user.primaryEmailAddressId
       )?.emailAddress?.toLowerCase().trim()
 
+      // Admin users go to admin dashboard
       if (userEmail === ADMIN_EMAIL.toLowerCase().trim()) {
         router.push('/admin')
+        return
+      }
+
+      // Check if user already completed onboarding
+      if (userEmail) {
+        fetch(`/api/business/me?email=${encodeURIComponent(userEmail)}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.onboardingCompleted === true) {
+              console.log('Onboarding already completed, redirecting to dashboard')
+              router.push('/admin')
+            }
+          })
+          .catch(err => {
+            console.error('Error checking onboarding status:', err)
+            // Silently fail - let user see onboarding page if API fails
+          })
       }
     }
   }, [isLoaded, user, router])
