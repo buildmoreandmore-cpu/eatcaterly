@@ -5,8 +5,13 @@ import { getAvailableNumber, assignNumber, addToInventory } from '@/lib/phone-in
 import ezTexting from '@/lib/ez-texting'
 
 export async function POST(request: NextRequest) {
+  console.log('[Onboarding] POST handler called')
+
+  // Wrap everything in a master try-catch to ensure we ALWAYS return JSON
   try {
+    console.log('[Onboarding] Parsing request body')
     const { zipCode, businessName, contactEmail, contactName, clerkUserId, promoCode } = await request.json()
+    console.log('[Onboarding] Request body parsed successfully')
 
     console.log('[Onboarding] Request received:', { zipCode, businessName, contactEmail, contactName, promoCode })
 
@@ -234,18 +239,37 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('[Onboarding] Unhandled error:', {
-      message: error.message,
-      stack: error.stack,
-      name: error.name,
-      cause: error.cause
+    // CRITICAL: This catch block MUST return JSON, never HTML
+    console.error('[Onboarding] CRITICAL - Unhandled error in route handler:', {
+      errorType: typeof error,
+      errorName: error?.name,
+      message: error?.message,
+      stack: error?.stack,
+      cause: error?.cause,
+      fullError: error
     })
-    return NextResponse.json(
-      {
-        success: false,
-        error: error.message || 'Failed to complete onboarding. Please try again or contact support.'
-      },
-      { status: 500 }
-    )
+
+    // Ensure we always return a valid JSON response
+    try {
+      return NextResponse.json(
+        {
+          success: false,
+          error: error?.message || 'An unexpected error occurred during onboarding. Please try again or contact support.',
+          errorType: error?.name || 'Unknown'
+        },
+        { status: 500 }
+      )
+    } catch (jsonError) {
+      // If even creating the JSON response fails, log it
+      console.error('[Onboarding] CRITICAL - Failed to create error response:', jsonError)
+      // Return a minimal response
+      return new Response(
+        JSON.stringify({ success: false, error: 'Internal server error' }),
+        {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      )
+    }
   }
 }

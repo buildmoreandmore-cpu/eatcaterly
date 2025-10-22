@@ -209,19 +209,35 @@ export default function OnboardingPage() {
               <p className="text-gray-600">Your business profile is complete</p>
             </div>
 
-            {/* Phone Number Display */}
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 mb-6">
-              <div className="text-center">
-                <p className="text-sm text-gray-600 mb-2">Your A2P-Compliant Phone Number</p>
-                <div className="text-4xl font-bold text-blue-600 mb-2 font-mono">
-                  {result.data?.assignedPhoneNumber}
+            {/* Phone Number Display - Only show if phone number was assigned */}
+            {result.data?.assignedPhoneNumber && (
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 mb-6">
+                <div className="text-center">
+                  <p className="text-sm text-gray-600 mb-2">Your A2P-Compliant Phone Number</p>
+                  <div className="text-4xl font-bold text-blue-600 mb-2 font-mono">
+                    {result.data.assignedPhoneNumber}
+                  </div>
+                  <p className="text-gray-700">
+                    Local to {result.data?.location.city}, {result.data?.location.state}
+                  </p>
+                  <p className="text-sm text-gray-600 mt-2">Area Code: {result.data?.areaCode}</p>
                 </div>
-                <p className="text-gray-700">
-                  Local to {result.data?.location.city}, {result.data?.location.state}
-                </p>
-                <p className="text-sm text-gray-600 mt-2">Area Code: {result.data?.areaCode}</p>
               </div>
-            </div>
+            )}
+
+            {/* Message for users without assigned number (promo code with free phone) */}
+            {!result.data?.assignedPhoneNumber && (
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 mb-6">
+                <div className="text-center">
+                  <p className="text-lg text-gray-700 mb-2">
+                    Your business profile has been created successfully!
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    A dedicated phone number will be assigned to you after completing your subscription.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Business Details */}
             <div className="space-y-3 mb-8">
