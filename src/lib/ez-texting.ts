@@ -303,9 +303,34 @@ export async function sendSMS(params: SendSMSParams): Promise<SendSMSResult> {
   }
 
   try {
-    // Format phone numbers (EZTexting expects format like +14041234567 or 14041234567)
-    const formattedTo = to.replace(/[^\d+]/g, '')
-    const formattedFrom = from.replace(/[^\d+]/g, '')
+    // Format phone numbers to E.164 format (EZTexting requires +1XXXXXXXXXX for US numbers)
+    const formatPhoneNumber = (phone: string): string => {
+      // Remove all non-digit characters
+      const digitsOnly = phone.replace(/\D/g, '')
+
+      // If it already starts with 1 and has 11 digits, add +
+      if (digitsOnly.length === 11 && digitsOnly.startsWith('1')) {
+        return `+${digitsOnly}`
+      }
+
+      // If it has 10 digits (US number without country code), add +1
+      if (digitsOnly.length === 10) {
+        return `+1${digitsOnly}`
+      }
+
+      // If it already has +, use as is
+      if (phone.startsWith('+')) {
+        return phone
+      }
+
+      // Fallback: assume US number and add +1
+      return `+1${digitsOnly}`
+    }
+
+    const formattedTo = formatPhoneNumber(to)
+    const formattedFrom = formatPhoneNumber(from)
+
+    console.log('[EZTexting] Sending SMS:', { to: formattedTo, from: formattedFrom, messageLength: message.length })
 
     const response = await fetch(`${EZ_TEXTING_API_URL}/sending/messages`, {
       method: 'POST',
@@ -322,6 +347,7 @@ export async function sendSMS(params: SendSMSParams): Promise<SendSMSResult> {
 
     if (response.ok) {
       const data = await response.json()
+      console.log('[EZTexting] SMS sent successfully:', data)
       return {
         success: true,
         messageId: data.Entry?.MessageID || data.messageId || 'unknown',
@@ -330,6 +356,7 @@ export async function sendSMS(params: SendSMSParams): Promise<SendSMSResult> {
 
     // Handle authentication errors
     if (response.status === 401) {
+      console.error('[EZTexting] Authentication failed')
       return {
         success: false,
         error: 'EZ Texting authentication failed. Please check API credentials.',
@@ -337,6 +364,12 @@ export async function sendSMS(params: SendSMSParams): Promise<SendSMSResult> {
     }
 
     const errorData = await response.json().catch(() => ({}))
+    console.error('[EZTexting] SMS send failed:', {
+      status: response.status,
+      errorData,
+      to: formattedTo,
+      from: formattedFrom
+    })
     return {
       success: false,
       error: errorData.error || errorData.Response?.Errors?.[0]?.Message || `Failed to send SMS: ${response.status}`,
