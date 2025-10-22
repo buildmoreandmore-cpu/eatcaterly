@@ -138,60 +138,31 @@ function PlanSelectionContent() {
     setError('')
 
     try {
-      const selectedPlanData = plans.find(p => p.id === selectedPlan)
-      const discountedPrice = calculateDiscountedPrice(selectedPlanData?.price || 0)
+      // Always create Stripe checkout session (even with 100% discount)
+      // Stripe will handle the promo code discount
+      const endpoint = businessId ? '/api/create-checkout' : '/api/test-checkout'
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          plan: selectedPlan,
+          businessId: businessId || undefined,
+          email: user?.emailAddresses[0]?.emailAddress || 'test@example.com',
+          promoCodeId: promoData?.id,
+          promoCode: promoCode,
+        }),
+      })
 
-      // If 100% discount, skip Stripe and create business directly
-      if (discountedPrice === 0 && promoData) {
-        const response = await fetch('/api/onboarding/complete-free', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            plan: selectedPlan,
-            promoCodeId: promoData.id,
-            promoCode: promoCode,
-            businessId: businessId || undefined,
-            email: user?.emailAddresses[0]?.emailAddress || 'test@example.com',
-          }),
-        })
+      const data = await response.json()
 
-        const data = await response.json()
-
-        if (data.success) {
-          // Redirect to success page
-          router.push('/onboarding/success')
-        } else {
-          setError(data.error || 'Failed to complete signup')
-          setIsLoading(false)
-        }
+      if (data.success && data.checkoutUrl) {
+        // Redirect to Stripe checkout
+        window.location.href = data.checkoutUrl
       } else {
-        // Create Stripe checkout session (with or without discount)
-        const endpoint = businessId ? '/api/create-checkout' : '/api/test-checkout'
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            plan: selectedPlan,
-            businessId: businessId || undefined,
-            email: user?.emailAddresses[0]?.emailAddress || 'test@example.com',
-            promoCodeId: promoData?.id,
-            promoCode: promoCode,
-          }),
-        })
-
-        const data = await response.json()
-
-        if (data.success && data.checkoutUrl) {
-          // Redirect to Stripe checkout
-          window.location.href = data.checkoutUrl
-        } else {
-          setError(data.error || 'Failed to create checkout session')
-          setIsLoading(false)
-        }
+        setError(data.error || 'Failed to create checkout session')
+        setIsLoading(false)
       }
     } catch (err) {
       setError('Network error. Please try again.')
