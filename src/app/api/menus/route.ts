@@ -24,6 +24,8 @@ export async function GET(request: NextRequest) {
       whereCondition.date = new Date(date)
     }
 
+    console.log('[GET /api/menus] Query conditions:', JSON.stringify(whereCondition))
+
     const menus = await prisma.menu.findMany({
       where: whereCondition,
       include: {
@@ -36,11 +38,15 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    console.log('[GET /api/menus] Returning', menus.length, 'menus')
+    console.log('[GET /api/menus] Found', menus.length, 'menus for businessId:', businessId)
+    if (menus.length > 0) {
+      console.log('[GET /api/menus] Menu IDs:', menus.map(m => m.id).join(', '))
+      console.log('[GET /api/menus] Total menu items:', menus.reduce((sum, m) => sum + m.menuItems.length, 0))
+    }
 
     return NextResponse.json(menus)
   } catch (error: any) {
-    console.error('Failed to fetch menus:', error)
+    console.error('[GET /api/menus] Error:', error)
     return NextResponse.json(
       { error: 'Failed to fetch menus' },
       { status: 500 }
