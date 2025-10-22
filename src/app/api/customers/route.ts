@@ -75,8 +75,13 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('[POST /api/customers] Starting customer creation')
+
     const businessId = await getCurrentUserBusinessId()
+    console.log('[POST /api/customers] businessId:', businessId)
+
     if (!businessId) {
+      console.error('[POST /api/customers] No businessId found - returning 404')
       return NextResponse.json(
         { error: 'Business not found for current user' },
         { status: 404 }
@@ -84,8 +89,10 @@ export async function POST(request: NextRequest) {
     }
 
     const { phoneNumber, name, email, category, tags, notes } = await request.json()
+    console.log('[POST /api/customers] Request data:', { phoneNumber, name, email, category, tags, notes })
 
     if (!phoneNumber) {
+      console.error('[POST /api/customers] No phone number provided')
       return NextResponse.json(
         { error: 'Phone number is required' },
         { status: 400 }
@@ -108,6 +115,7 @@ export async function POST(request: NextRequest) {
     }
 
     const normalizedPhone = normalizePhoneNumber(phoneNumber)
+    console.log('[POST /api/customers] Normalized phone:', normalizedPhone)
 
     // Check if customer already exists for this business
     const existingCustomer = await prisma.customer.findFirst({
@@ -118,12 +126,14 @@ export async function POST(request: NextRequest) {
     })
 
     if (existingCustomer) {
+      console.log('[POST /api/customers] Customer already exists:', existingCustomer.id)
       return NextResponse.json(
         { error: 'Customer with this phone number already exists' },
         { status: 409 }
       )
     }
 
+    console.log('[POST /api/customers] Creating new customer...')
     const customer = await prisma.customer.create({
       data: {
         businessId,
@@ -146,9 +156,11 @@ export async function POST(request: NextRequest) {
       }
     })
 
+    console.log('[POST /api/customers] Customer created successfully:', customer.id)
     return NextResponse.json(customer, { status: 201 })
   } catch (error: any) {
-    console.error('Failed to create customer:', error)
+    console.error('[POST /api/customers] Error creating customer:', error)
+    console.error('[POST /api/customers] Error stack:', error.stack)
     return NextResponse.json(
       { error: 'Failed to create customer' },
       { status: 500 }
