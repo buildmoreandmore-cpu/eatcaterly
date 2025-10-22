@@ -16,7 +16,9 @@ const PHONE_NUMBER_PRICE = 3000 // $30 one-time charge for EZ Texting phone numb
 
 export async function POST(request: NextRequest) {
   try {
-    const { plan, userId, email } = await request.json()
+    const { plan, businessId, email, promoCode, promoCodeId } = await request.json()
+
+    console.log('[Create-Checkout] Request received:', { plan, businessId, email, promoCode, promoCodeId })
 
     // Validate plan
     if (!plan || !['starter', 'pro'].includes(plan)) {
@@ -30,20 +32,27 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate required fields
-    if (!email) {
+    if (!businessId && !email) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Email is required',
+          error: 'Either businessId or email is required',
         },
         { status: 400 }
       )
     }
 
-    // Get or create business customer
-    const businessCustomer = await prisma.businessCustomer.findUnique({
-      where: { contactEmail: email },
-    })
+    // Get business customer by businessId or email
+    let businessCustomer
+    if (businessId) {
+      businessCustomer = await prisma.businessCustomer.findUnique({
+        where: { id: businessId },
+      })
+    } else {
+      businessCustomer = await prisma.businessCustomer.findUnique({
+        where: { contactEmail: email },
+      })
+    }
 
     if (!businessCustomer) {
       return NextResponse.json(
@@ -55,55 +64,107 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get subscription price for the selected plan
-    const subscriptionPrice = SUBSCRIPTION_PRICES[plan as keyof typeof SUBSCRIPTION_PRICES]
+    // Check promo code for special handling
+    let skipPhoneCharge = false
+    let promoDiscount = 0
+    if (promoCode || promoCodeId) {
+      const promo = await prisma.promoCode.findFirst({
+        where: promoCodeId ? { id: promoCodeId } : { code: promoCode },
+      })
 
-    // Create Stripe checkout session with split payment:
-    // 1. $30 one-time charge for phone number (charged immediately)
-    // 2. Subscription ($35/$95) with 14-day trial
+      if (promo && promo.isActive) {
+        console.log('[Create-Checkout] Promo code found:', { code: promo.code, freePhoneNumber: promo.freePhoneNumber, freeSubscription: promo.freeSubscription })
+
+        // Skip phone number charge if promo provides free phone
+        if (promo.freePhoneNumber) {
+          skipPhoneCharge = true
+        }
+
+        // Calculate discount if promo provides free subscription
+        if (promo.freeSubscription) {
+          if (promo.discountType === 'PERCENTAGE') {
+            promoDiscount = promo.discountValue // e.g., 100 for 100%
+          } else {
+            // FIXED_AMOUNT in cents
+            promoDiscount = promo.discountValue
+          }
+        }
+      }
+    }
+
+    // Get subscription price for the selected plan
+    let subscriptionPrice = SUBSCRIPTION_PRICES[plan as keyof typeof SUBSCRIPTION_PRICES]
+
+    // Apply discount if applicable (100% = free)
+    if (promoDiscount > 0) {
+      if (promoDiscount >= 100) {
+        // 100% discount = completely free
+        subscriptionPrice = 0
+      } else {
+        // Partial discount
+        subscriptionPrice = Math.round(subscriptionPrice * (1 - promoDiscount / 100))
+      }
+    }
+
+    console.log('[Create-Checkout] Pricing:', {
+      skipPhoneCharge,
+      originalPrice: SUBSCRIPTION_PRICES[plan as keyof typeof SUBSCRIPTION_PRICES],
+      discountedPrice: subscriptionPrice,
+      promoDiscount
+    })
+
+    // Build line items array
+    const lineItems: any[] = []
+
+    // Add phone number charge only if not skipped by promo
+    if (!skipPhoneCharge) {
+      lineItems.push({
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: 'A2P-Compliant Phone Number',
+            description: 'One-time setup fee for your dedicated SMS phone number',
+          },
+          unit_amount: PHONE_NUMBER_PRICE,
+        },
+        quantity: 1,
+      })
+    }
+
+    // Add subscription (always add, even if $0 with promo)
+    lineItems.push({
+      price_data: {
+        currency: 'usd',
+        product_data: {
+          name: `${plan.charAt(0).toUpperCase() + plan.slice(1)} Plan`,
+          description: `SMS ordering and menu management for your food business`,
+        },
+        unit_amount: subscriptionPrice,
+        recurring: {
+          interval: 'month',
+        },
+      },
+      quantity: 1,
+    })
+
+    // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       payment_method_types: ['card'],
-      line_items: [
-        // Line item 1: One-time $30 charge for phone number (no trial)
-        {
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: 'A2P-Compliant Phone Number',
-              description: 'One-time setup fee for your dedicated SMS phone number',
-            },
-            unit_amount: PHONE_NUMBER_PRICE,
-          },
-          quantity: 1,
-        },
-        // Line item 2: Subscription with 14-day trial
-        {
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: `${plan.charAt(0).toUpperCase() + plan.slice(1)} Plan`,
-              description: `SMS ordering and menu management for your food business`,
-            },
-            unit_amount: subscriptionPrice,
-            recurring: {
-              interval: 'month',
-            },
-          },
-          quantity: 1,
-        },
-      ],
-      customer_email: email,
+      line_items: lineItems,
+      customer_email: businessCustomer.contactEmail,
       client_reference_id: businessCustomer.id,
       metadata: {
         businessId: businessCustomer.id,
         plan: plan,
-        userId: userId || '',
+        promoCode: promoCode || '',
+        freePhoneNumber: skipPhoneCharge.toString(),
       },
       subscription_data: {
         metadata: {
           businessId: businessCustomer.id,
           plan: plan,
+          promoCode: promoCode || '',
         },
         trial_period_days: 14, // 14-day free trial
       },
@@ -127,11 +188,21 @@ export async function POST(request: NextRequest) {
       sessionId: session.id,
     })
   } catch (error: any) {
-    console.error('Checkout session creation error:', error)
+    console.error('[Create-Checkout] CRITICAL ERROR:', {
+      message: error.message,
+      type: error.type,
+      code: error.code,
+      statusCode: error.statusCode,
+      stack: error.stack,
+      raw: error.raw,
+      fullError: error
+    })
+
+    // Return user-friendly error message
     return NextResponse.json(
       {
         success: false,
-        error: error.message || 'Failed to create checkout session',
+        error: error.message || 'Failed to create checkout session. Please try again or contact support.',
       },
       { status: 500 }
     )
