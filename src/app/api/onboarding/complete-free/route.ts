@@ -17,8 +17,11 @@ export async function POST(req: NextRequest) {
       email,
     } = body
 
+    console.log('[Complete-Free] Request received:', { plan, promoCodeId, promoCode, businessId, email })
+
     // Validation
     if (!plan || !promoCodeId || !promoCode || !businessId) {
+      console.log('[Complete-Free] Missing required fields:', { plan: !!plan, promoCodeId: !!promoCodeId, promoCode: !!promoCode, businessId: !!businessId })
       return NextResponse.json(
         { success: false, error: 'Missing required fields' },
         { status: 400 }
@@ -59,13 +62,30 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if business exists (should already exist from onboarding step 1)
+    console.log('[Complete-Free] Looking for business with ID:', businessId)
     const existingBusiness = await prisma.businessCustomer.findUnique({
       where: { id: businessId },
     })
 
+    console.log('[Complete-Free] Business found:', existingBusiness ? 'Yes' : 'No')
+
     if (!existingBusiness) {
+      // Try to find by email as fallback
+      console.log('[Complete-Free] Business not found by ID, trying by email:', email)
+      const businessByEmail = await prisma.businessCustomer.findUnique({
+        where: { contactEmail: email },
+      })
+
+      if (businessByEmail) {
+        console.log('[Complete-Free] Found business by email with ID:', businessByEmail.id)
+        return NextResponse.json(
+          { success: false, error: `Business found with email but different ID. Expected: ${businessId}, Found: ${businessByEmail.id}` },
+          { status: 404 }
+        )
+      }
+
       return NextResponse.json(
-        { success: false, error: 'Business not found. Please complete onboarding first.' },
+        { success: false, error: 'Business profile not found. Please complete onboarding first.' },
         { status: 404 }
       )
     }
