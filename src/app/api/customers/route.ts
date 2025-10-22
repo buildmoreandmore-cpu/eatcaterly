@@ -81,9 +81,9 @@ export async function POST(request: NextRequest) {
     console.log('[POST /api/customers] businessId:', businessId)
 
     if (!businessId) {
-      console.error('[POST /api/customers] No businessId found - returning 404')
+      console.error('[POST /api/customers] No businessId found - user may not have completed onboarding')
       return NextResponse.json(
-        { error: 'Business not found for current user' },
+        { error: 'Business account not found. Please complete onboarding first or contact support.' },
         { status: 404 }
       )
     }
