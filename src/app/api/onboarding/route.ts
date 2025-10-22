@@ -158,35 +158,56 @@ export async function POST(request: NextRequest) {
     }
 
     // Create or update business customer record
-    const businessCustomer = existingCustomer
-      ? await prisma.businessCustomer.update({
-          where: { id: existingCustomer.id },
-          data: {
-            businessName,
-            contactName,
-            zipCode,
-            assignedPhoneNumber: phoneNumber,
-            areaCode: areaCode,
-            city: location?.city,
-            state: location?.state,
-            onboardingCompleted: false,
-            isActive: true,
-          }
-        })
-      : await prisma.businessCustomer.create({
-          data: {
-            businessName,
-            contactName,
-            contactEmail,
-            zipCode,
-            assignedPhoneNumber: phoneNumber,
-            areaCode: areaCode,
-            city: location?.city,
-            state: location?.state,
-            onboardingCompleted: false,
-            isActive: true,
-          }
-        })
+    console.log('[Onboarding] Creating/updating business customer:', { businessName, contactEmail, phoneNumber })
+
+    let businessCustomer
+    try {
+      businessCustomer = existingCustomer
+        ? await prisma.businessCustomer.update({
+            where: { id: existingCustomer.id },
+            data: {
+              businessName,
+              contactName,
+              zipCode,
+              assignedPhoneNumber: phoneNumber,
+              areaCode: areaCode,
+              city: location?.city,
+              state: location?.state,
+              onboardingCompleted: false,
+              isActive: true,
+            }
+          })
+        : await prisma.businessCustomer.create({
+            data: {
+              businessName,
+              contactName,
+              contactEmail,
+              zipCode,
+              assignedPhoneNumber: phoneNumber,
+              areaCode: areaCode,
+              city: location?.city,
+              state: location?.state,
+              onboardingCompleted: false,
+              isActive: true,
+            }
+          })
+
+      console.log('[Onboarding] Business customer created/updated successfully:', businessCustomer.id)
+    } catch (dbError: any) {
+      console.error('[Onboarding] Database error creating/updating business customer:', {
+        message: dbError.message,
+        code: dbError.code,
+        meta: dbError.meta,
+        stack: dbError.stack
+      })
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Database error: ${dbError.message || 'Failed to create business profile'}`
+        },
+        { status: 500 }
+      )
+    }
 
     // Mark inventory number as assigned to this business
     if (inventoryId) {
@@ -196,6 +217,10 @@ export async function POST(request: NextRequest) {
     // TODO: Send welcome email with phone number details
     console.log(`Welcome email would be sent to ${contactEmail}`)
 
+    const successMessage = phoneNumber
+      ? `Success! Your local SMS number ${phoneNumber} has been assigned for ${location?.city}, ${location?.state}`
+      : `Success! Your business profile has been created for ${location?.city}, ${location?.state}`
+
     return NextResponse.json({
       success: true,
       data: {
@@ -204,7 +229,7 @@ export async function POST(request: NextRequest) {
         assignedPhoneNumber: phoneNumber,
         areaCode: areaCode,
         location: location,
-        message: `Success! Your local SMS number ${phoneNumber} has been assigned for ${location?.city}, ${location?.state}`
+        message: successMessage
       }
     })
 
