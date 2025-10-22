@@ -39,6 +39,7 @@ export default function BroadcastMenuPage() {
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [broadcastResult, setBroadcastResult] = useState<{sent: number, failed: number, total: number} | null>(null)
 
   useEffect(() => {
     loadData()
@@ -117,6 +118,7 @@ export default function BroadcastMenuPage() {
       const data = await response.json()
 
       if (response.ok) {
+        setBroadcastResult({ sent: data.sent, failed: data.failed, total: data.total })
         setSuccess(true)
         setSelectedMenuId('')
         setSelectedCustomerIds(new Set())
@@ -149,7 +151,7 @@ export default function BroadcastMenuPage() {
     )
   }
 
-  if (success) {
+  if (success && broadcastResult) {
     return (
       <div className="p-8">
         <div className="max-w-4xl mx-auto">
@@ -161,7 +163,8 @@ export default function BroadcastMenuPage() {
               Broadcast Sent Successfully!
             </h2>
             <p className="text-gray-600 mb-4">
-              Your menu has been sent to {selectedCustomerIds.size} customer{selectedCustomerIds.size !== 1 ? 's' : ''} via SMS.
+              Your menu has been sent to {broadcastResult.sent} customer{broadcastResult.sent !== 1 ? 's' : ''} via SMS.
+              {broadcastResult.failed > 0 && <><br/><span className="text-orange-600">{broadcastResult.failed} message{broadcastResult.failed !== 1 ? 's' : ''} failed to send.</span></>}
             </p>
             <p className="text-sm text-gray-500">
               Redirecting to dashboard...
