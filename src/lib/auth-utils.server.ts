@@ -71,8 +71,14 @@ export async function getCurrentUserBusinessId(): Promise<string | null> {
       return null
     }
 
-    const business = await prisma.businessCustomer.findUnique({
-      where: { contactEmail: email },
+    // Case-insensitive email lookup
+    const business = await prisma.businessCustomer.findFirst({
+      where: {
+        contactEmail: {
+          equals: email,
+          mode: 'insensitive'
+        }
+      },
       select: { id: true }
     })
 
