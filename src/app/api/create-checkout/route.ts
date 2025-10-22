@@ -6,13 +6,11 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2025-08-27.basil',
 })
 
-// Subscription pricing (split payment model)
+// Subscription pricing (full monthly price)
 const SUBSCRIPTION_PRICES = {
-  starter: 3500, // $35/month (total $65 - $30 phone number)
-  pro: 9500, // $95/month (total $125 - $30 phone number)
+  starter: 6500, // $65/month (includes phone number)
+  pro: 12500, // $125/month (includes phone number)
 }
-
-const PHONE_NUMBER_PRICE = 3000 // $30 one-time charge for EZ Texting phone number
 
 export async function POST(request: NextRequest) {
   try {
@@ -64,8 +62,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check promo code for special handling
-    let skipPhoneCharge = false
+    // Check promo code for discount
     let promoDiscount = 0
     if (promoCode || promoCodeId) {
       const promo = await prisma.promoCode.findFirst({
@@ -73,12 +70,7 @@ export async function POST(request: NextRequest) {
       })
 
       if (promo && promo.isActive) {
-        console.log('[Create-Checkout] Promo code found:', { code: promo.code, freePhoneNumber: promo.freePhoneNumber, freeSubscription: promo.freeSubscription })
-
-        // Skip phone number charge if promo provides free phone
-        if (promo.freePhoneNumber) {
-          skipPhoneCharge = true
-        }
+        console.log('[Create-Checkout] Promo code found:', { code: promo.code, freeSubscription: promo.freeSubscription })
 
         // Calculate discount if promo provides free subscription
         if (promo.freeSubscription) {
@@ -107,37 +99,19 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('[Create-Checkout] Pricing:', {
-      skipPhoneCharge,
       originalPrice: SUBSCRIPTION_PRICES[plan as keyof typeof SUBSCRIPTION_PRICES],
       discountedPrice: subscriptionPrice,
-      promoDiscount
+      promoDiscount,
+      hasPromo: !!promoCode
     })
 
-    // Build line items array
-    const lineItems: any[] = []
-
-    // Add phone number charge only if not skipped by promo
-    if (!skipPhoneCharge) {
-      lineItems.push({
-        price_data: {
-          currency: 'usd',
-          product_data: {
-            name: 'A2P-Compliant Phone Number',
-            description: 'One-time setup fee for your dedicated SMS phone number',
-          },
-          unit_amount: PHONE_NUMBER_PRICE,
-        },
-        quantity: 1,
-      })
-    }
-
-    // Add subscription (always add, even if $0 with promo)
-    lineItems.push({
+    // Create subscription line item
+    const lineItems: any[] = [{
       price_data: {
         currency: 'usd',
         product_data: {
           name: `${plan.charAt(0).toUpperCase() + plan.slice(1)} Plan`,
-          description: `SMS ordering and menu management for your food business`,
+          description: 'SMS ordering and menu management (includes A2P-compliant phone number)',
         },
         unit_amount: subscriptionPrice,
         recurring: {
@@ -145,7 +119,7 @@ export async function POST(request: NextRequest) {
         },
       },
       quantity: 1,
-    })
+    }]
 
     // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
@@ -158,7 +132,6 @@ export async function POST(request: NextRequest) {
         businessId: businessCustomer.id,
         plan: plan,
         promoCode: promoCode || '',
-        freePhoneNumber: skipPhoneCharge.toString(),
       },
       subscription_data: {
         metadata: {
