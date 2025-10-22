@@ -274,10 +274,13 @@ async function handleBusinessSubscriptionCheckout(session: Stripe.Checkout.Sessi
           stripeCustomerId: session.customer as string,
           stripeSubscriptionId: session.subscription as string,
           subscriptionStatus: 'active',
+          subscriptionTier: plan,
+          onboardingCompleted: true,
         },
       })
 
       console.log(`✓ Phone number provisioned: ${provisionResult.phoneNumber}`)
+      console.log(`✓ Onboarding completed for business ${businessId}`)
 
       if (provisionResult.fallbackUsed) {
         console.log(`  Note: Fallback area code ${provisionResult.areaCode} was used`)
@@ -286,14 +289,20 @@ async function handleBusinessSubscriptionCheckout(session: Stripe.Checkout.Sessi
       // Log provisioning failure but don't fail the webhook
       console.error(`Phone provisioning failed for business ${businessId}:`, provisionResult.error)
 
-      // Still update Stripe IDs even if provisioning failed
+      // Still update Stripe IDs and mark onboarding complete even if provisioning failed
+      // (Admin can manually assign a number later)
       await prisma.businessCustomer.update({
         where: { id: businessId },
         data: {
           stripeCustomerId: session.customer as string,
           stripeSubscriptionId: session.subscription as string,
+          subscriptionStatus: 'trial',
+          subscriptionTier: plan,
+          onboardingCompleted: true,
         },
       })
+
+      console.log(`✓ Onboarding completed for business ${businessId} (phone provisioning pending)`)
     }
   } catch (error) {
     console.error('Error handling business subscription checkout:', error)
