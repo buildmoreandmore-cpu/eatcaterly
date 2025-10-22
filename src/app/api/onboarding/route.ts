@@ -6,9 +6,9 @@ import ezTexting from '@/lib/ez-texting'
 
 export async function POST(request: NextRequest) {
   try {
-    const { zipCode, businessName, contactEmail, contactName, clerkUserId } = await request.json()
+    const { zipCode, businessName, contactEmail, contactName, clerkUserId, promoCode } = await request.json()
 
-    console.log('[Onboarding] Request received:', { zipCode, businessName, contactEmail, contactName })
+    console.log('[Onboarding] Request received:', { zipCode, businessName, contactEmail, contactName, promoCode })
 
     // Test database connection first
     try {
@@ -92,47 +92,69 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Check if promo code provides free phone number
+    let skipPhoneProvisioning = false
+    if (promoCode) {
+      try {
+        const promoRecord = await prisma.promoCode.findUnique({
+          where: { code: promoCode }
+        })
+        if (promoRecord && promoRecord.freePhoneNumber) {
+          console.log('[Onboarding] Promo code provides free phone number, skipping provisioning')
+          skipPhoneProvisioning = true
+        }
+      } catch (err) {
+        console.error('[Onboarding] Error checking promo code:', err)
+        // Continue anyway if promo check fails
+      }
+    }
+
     // Smart number assignment: Check inventory first, then purchase if needed
-    let phoneNumber: string
+    let phoneNumber: string | null = null
     let inventoryId: string | undefined
 
-    // 1. Try to get number from inventory (available or cooldown expired)
-    const inventoryResult = await getAvailableNumber(areaCode)
+    // Only provision phone number if not skipping
+    if (!skipPhoneProvisioning) {
+      // 1. Try to get number from inventory (available or cooldown expired)
+      const inventoryResult = await getAvailableNumber(areaCode)
 
-    if (inventoryResult.success && inventoryResult.number) {
-      // Found number in inventory
-      phoneNumber = inventoryResult.number.phoneNumber
-      inventoryId = inventoryResult.number.id
-      console.log(`Using ${inventoryResult.source} number from inventory: ${phoneNumber}`)
+      if (inventoryResult.success && inventoryResult.number) {
+        // Found number in inventory
+        phoneNumber = inventoryResult.number.phoneNumber
+        inventoryId = inventoryResult.number.id
+        console.log(`Using ${inventoryResult.source} number from inventory: ${phoneNumber}`)
+      } else {
+        // 2. No inventory number - purchase new one from EZTexting
+        console.log(`No inventory number available for area code ${areaCode}, purchasing new number...`)
+
+        const provisionResult = await ezTexting.provisionPhoneNumber(areaCode)
+
+        if (!provisionResult.success) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: provisionResult.error || 'Failed to provision phone number'
+            },
+            { status: 500 }
+          )
+        }
+
+        phoneNumber = provisionResult.phoneNumber!
+
+        // Add newly purchased number to inventory
+        const addResult = await addToInventory({
+          phoneNumber: provisionResult.phoneNumber!,
+          ezTextingNumberId: provisionResult.numberId!,
+          areaCode: provisionResult.areaCode!,
+        })
+
+        if (addResult.success) {
+          inventoryId = addResult.inventoryId
+          console.log(`New number ${phoneNumber} added to inventory`)
+        }
+      }
     } else {
-      // 2. No inventory number - purchase new one from EZTexting
-      console.log(`No inventory number available for area code ${areaCode}, purchasing new number...`)
-
-      const provisionResult = await ezTexting.provisionPhoneNumber(areaCode)
-
-      if (!provisionResult.success) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: provisionResult.error || 'Failed to provision phone number'
-          },
-          { status: 500 }
-        )
-      }
-
-      phoneNumber = provisionResult.phoneNumber!
-
-      // Add newly purchased number to inventory
-      const addResult = await addToInventory({
-        phoneNumber: provisionResult.phoneNumber!,
-        ezTextingNumberId: provisionResult.numberId!,
-        areaCode: provisionResult.areaCode!,
-      })
-
-      if (addResult.success) {
-        inventoryId = addResult.inventoryId
-        console.log(`New number ${phoneNumber} added to inventory`)
-      }
+      console.log('[Onboarding] Skipping phone provisioning due to promo code')
     }
 
     // Create or update business customer record

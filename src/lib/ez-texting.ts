@@ -3,8 +3,18 @@
  * Handles phone number provisioning and management
  */
 
-const EZ_TEXTING_API_URL = process.env.EZ_TEXTING_API_URL || 'https://app.eztexting.com/api'
-const EZ_TEXTING_API_KEY = process.env.EZ_TEXTING_API_KEY
+const EZ_TEXTING_API_URL = process.env.EZ_TEXTING_API_URL || 'https://app.eztexting.com'
+const EZTEXTING_USERNAME = process.env.EZTEXTING_USERNAME
+const EZTEXTING_PASSWORD = process.env.EZTEXTING_PASSWORD
+
+// Create Basic Auth header
+function getAuthHeader(): string {
+  if (!EZTEXTING_USERNAME || !EZTEXTING_PASSWORD) {
+    throw new Error('EZTexting credentials not configured')
+  }
+  const credentials = Buffer.from(`${EZTEXTING_USERNAME}:${EZTEXTING_PASSWORD}`).toString('base64')
+  return `Basic ${credentials}`
+}
 
 // Atlanta area code fallbacks (404 → 470 → 678 → 770)
 const AREA_CODE_FALLBACKS: Record<string, string[]> = {
