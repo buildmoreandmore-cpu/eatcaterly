@@ -37,29 +37,8 @@ export async function GET(request: NextRequest) {
 
     const customers = await prisma.customer.findMany({
       where,
-      include: {
-        _count: {
-          select: {
-            orders: true,
-            smsLogs: true,
-            customerListMembers: true
-          }
-        },
-        customerListMembers: {
-          include: {
-            customerList: {
-              select: {
-                id: true,
-                name: true,
-                color: true
-              }
-            }
-          },
-          take: 3 // Limit to first 3 lists for performance
-        }
-      },
       orderBy: {
-        totalOrders: 'desc'
+        createdAt: 'desc'
       }
     })
 
@@ -88,8 +67,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { phoneNumber, name, email, category, tags, notes } = await request.json()
-    console.log('[POST /api/customers] Request data:', { phoneNumber, name, email, category, tags, notes })
+    const { phoneNumber, name, email } = await request.json()
+    console.log('[POST /api/customers] Request data:', { phoneNumber, name, email })
 
     if (!phoneNumber) {
       console.error('[POST /api/customers] No phone number provided')
@@ -140,19 +119,7 @@ export async function POST(request: NextRequest) {
         phoneNumber: normalizedPhone,
         name: name || null,
         email: email || null,
-        category: category || 'New',
-        tags: tags || ['New'],
-        notes: notes || null,
         isActive: true
-      },
-      include: {
-        _count: {
-          select: {
-            orders: true,
-            smsLogs: true,
-            customerListMembers: true
-          }
-        }
       }
     })
 
@@ -227,7 +194,7 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    const { id, phoneNumber, name, email, category, tags, notes, isActive } = await request.json()
+    const { id, phoneNumber, name, email } = await request.json()
 
     if (!id) {
       return NextResponse.json(
@@ -275,20 +242,7 @@ export async function PATCH(request: NextRequest) {
       data: {
         ...(normalizedPhone && { phoneNumber: normalizedPhone }),
         ...(name !== undefined && { name }),
-        ...(email !== undefined && { email }),
-        ...(category !== undefined && { category }),
-        ...(tags !== undefined && { tags }),
-        ...(notes !== undefined && { notes }),
-        ...(isActive !== undefined && { isActive }),
-      },
-      include: {
-        _count: {
-          select: {
-            orders: true,
-            smsLogs: true,
-            customerListMembers: true
-          }
-        }
+        ...(email !== undefined && { email })
       }
     })
 
