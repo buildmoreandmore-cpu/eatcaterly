@@ -15,7 +15,7 @@ datasource db {
 
 model Customer {
   id          String    @id @default(cuid())
-  phoneNumber String    @unique
+  phoneNumber String    // Unique per business, not globally
   name        String?
   email       String?
   isActive    Boolean   @default(true)
@@ -36,6 +36,7 @@ model Customer {
   smsLogs             SmsLog[]
   customerListMembers CustomerListMember[]
 
+  @@unique([businessId, phoneNumber]) // Phone number must be unique per business
   @@map("customers")
 }
 
