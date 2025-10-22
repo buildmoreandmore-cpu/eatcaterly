@@ -5,7 +5,11 @@ import { getCurrentUserBusinessId } from '@/lib/auth-utils.server'
 export async function GET(request: NextRequest) {
   try {
     const businessId = await getCurrentUserBusinessId()
+
+    console.log('[GET /api/menus] businessId:', businessId)
+
     if (!businessId) {
+      console.error('[GET /api/menus] No businessId - returning 404')
       return NextResponse.json(
         { error: 'Business not found for current user' },
         { status: 404 }
@@ -31,6 +35,8 @@ export async function GET(request: NextRequest) {
         date: 'desc'
       }
     })
+
+    console.log('[GET /api/menus] Returning', menus.length, 'menus')
 
     return NextResponse.json(menus)
   } catch (error: any) {

@@ -64,6 +64,8 @@ export async function getCurrentUserEmail(): Promise<string | null> {
 export async function getCurrentUserBusinessId(): Promise<string | null> {
   try {
     const email = await getCurrentUserEmail()
+    console.log('[getCurrentUserBusinessId] User email:', email)
+
     if (!email) {
       console.error('[getCurrentUserBusinessId] No email found for current user')
       return null
@@ -74,8 +76,14 @@ export async function getCurrentUserBusinessId(): Promise<string | null> {
       select: { id: true }
     })
 
-    if (!business) {
+    console.log('[getCurrentUserBusinessId] Business found:', !!business)
+    if (business) {
+      console.log('[getCurrentUserBusinessId] Business ID:', business.id)
+    } else {
       console.error('[getCurrentUserBusinessId] No business found for email:', email)
+    }
+
+    if (!business) {
       return null
     }
 
