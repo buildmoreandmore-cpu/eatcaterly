@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Users, Plus, Trash2 } from 'lucide-react'
+import { Users, Plus, Trash2, Edit } from 'lucide-react'
 
 interface Customer {
   id: string
@@ -18,8 +18,10 @@ export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
   const [formData, setFormData] = useState({
     name: '',
     phoneNumber: '',
@@ -106,6 +108,81 @@ export default function CustomersPage() {
       setError('Network error. Please try again.')
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  function handleOpenEditModal(customer: Customer) {
+    setEditingCustomer(customer)
+    setFormData({
+      name: customer.name || '',
+      phoneNumber: customer.phoneNumber,
+      email: customer.email || '',
+    })
+    setShowEditModal(true)
+    setError(null)
+  }
+
+  function handleCloseEditModal() {
+    setShowEditModal(false)
+    setEditingCustomer(null)
+    setFormData({ name: '', phoneNumber: '', email: '' })
+    setError(null)
+  }
+
+  async function handleEditCustomer() {
+    setError(null)
+
+    if (!editingCustomer || !formData.phoneNumber.trim()) {
+      setError('Phone number is required')
+      return
+    }
+
+    try {
+      setIsSubmitting(true)
+      const res = await fetch('/api/customers', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editingCustomer.id,
+          ...formData
+        })
+      })
+
+      const data = await res.json()
+
+      if (res.ok) {
+        setShowEditModal(false)
+        setEditingCustomer(null)
+        setFormData({ name: '', phoneNumber: '', email: '' })
+        loadCustomers()
+      } else {
+        setError(data.error || 'Failed to update customer')
+      }
+    } catch (err) {
+      setError('Network error. Please try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  async function handleDeleteCustomer(customerId: string) {
+    if (!confirm('Are you sure you want to delete this customer?')) {
+      return
+    }
+
+    try {
+      const res = await fetch(`/api/customers?id=${customerId}`, {
+        method: 'DELETE',
+      })
+
+      if (res.ok) {
+        loadCustomers()
+      } else {
+        const data = await res.json()
+        alert(data.error || 'Failed to delete customer')
+      }
+    } catch (err) {
+      alert('Network error. Please try again.')
     }
   }
 
@@ -201,9 +278,20 @@ export default function CustomersPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                      <button className="text-red-600 hover:text-red-800">
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      <div className="flex items-center justify-end gap-3">
+                        <button
+                          onClick={() => handleOpenEditModal(customer)}
+                          className="text-blue-600 hover:text-blue-800"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteCustomer(customer.id)}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -289,6 +377,87 @@ export default function CustomersPage() {
                       <Plus className="h-4 w-4" />
                       Add Customer
                     </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Customer Modal */}
+        {showEditModal && editingCustomer && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+              <h2 className="text-2xl font-bold mb-4">Edit Customer</h2>
+
+              {error && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                  {error}
+                </div>
+              )}
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Name
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Customer name"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Phone Number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    value={formData.phoneNumber}
+                    onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="(555) 123-4567"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="customer@email.com"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-6 flex gap-3 justify-end">
+                <button
+                  onClick={handleCloseEditModal}
+                  disabled={isSubmitting}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-semibold disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleEditCustomer}
+                  disabled={isSubmitting}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold disabled:opacity-50 flex items-center gap-2"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Changes'
                   )}
                 </button>
               </div>

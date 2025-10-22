@@ -75,9 +75,26 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Normalize phone number to E.164 format
+    const normalizePhoneNumber = (phone: string): string => {
+      const digitsOnly = phone.replace(/\D/g, '')
+      if (digitsOnly.length === 11 && digitsOnly.startsWith('1')) {
+        return `+${digitsOnly}`
+      }
+      if (digitsOnly.length === 10) {
+        return `+1${digitsOnly}`
+      }
+      if (phone.startsWith('+')) {
+        return phone
+      }
+      return `+1${digitsOnly}`
+    }
+
+    const normalizedPhone = normalizePhoneNumber(phoneNumber)
+
     // Check if customer already exists
     const existingCustomer = await prisma.customer.findUnique({
-      where: { phoneNumber }
+      where: { phoneNumber: normalizedPhone }
     })
 
     if (existingCustomer) {
@@ -89,7 +106,7 @@ export async function POST(request: NextRequest) {
 
     const customer = await prisma.customer.create({
       data: {
-        phoneNumber,
+        phoneNumber: normalizedPhone,
         name: name || null,
         email: email || null,
         category: category || 'New',
@@ -113,6 +130,94 @@ export async function POST(request: NextRequest) {
     console.error('Failed to create customer:', error)
     return NextResponse.json(
       { error: 'Failed to create customer' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const url = new URL(request.url)
+    const customerId = url.searchParams.get('id')
+
+    if (!customerId) {
+      return NextResponse.json(
+        { error: 'Customer ID is required' },
+        { status: 400 }
+      )
+    }
+
+    await prisma.customer.delete({
+      where: { id: customerId }
+    })
+
+    return NextResponse.json({ success: true }, { status: 200 })
+  } catch (error: any) {
+    console.error('Failed to delete customer:', error)
+    return NextResponse.json(
+      { error: 'Failed to delete customer' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const { id, phoneNumber, name, email, category, tags, notes, isActive } = await request.json()
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Customer ID is required' },
+        { status: 400 }
+      )
+    }
+
+    // Normalize phone number if provided
+    let normalizedPhone = phoneNumber
+    if (phoneNumber) {
+      const normalizePhoneNumber = (phone: string): string => {
+        const digitsOnly = phone.replace(/\D/g, '')
+        if (digitsOnly.length === 11 && digitsOnly.startsWith('1')) {
+          return `+${digitsOnly}`
+        }
+        if (digitsOnly.length === 10) {
+          return `+1${digitsOnly}`
+        }
+        if (phone.startsWith('+')) {
+          return phone
+        }
+        return `+1${digitsOnly}`
+      }
+      normalizedPhone = normalizePhoneNumber(phoneNumber)
+    }
+
+    const customer = await prisma.customer.update({
+      where: { id },
+      data: {
+        ...(normalizedPhone && { phoneNumber: normalizedPhone }),
+        ...(name !== undefined && { name }),
+        ...(email !== undefined && { email }),
+        ...(category !== undefined && { category }),
+        ...(tags !== undefined && { tags }),
+        ...(notes !== undefined && { notes }),
+        ...(isActive !== undefined && { isActive }),
+      },
+      include: {
+        _count: {
+          select: {
+            orders: true,
+            smsLogs: true,
+            customerListMembers: true
+          }
+        }
+      }
+    })
+
+    return NextResponse.json(customer, { status: 200 })
+  } catch (error: any) {
+    console.error('Failed to update customer:', error)
+    return NextResponse.json(
+      { error: 'Failed to update customer' },
       { status: 500 }
     )
   }
