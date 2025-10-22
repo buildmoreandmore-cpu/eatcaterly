@@ -69,10 +69,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get customers
+    // Get customers (verify they belong to this business)
     const customers = await prisma.customer.findMany({
       where: {
         id: { in: customerIds },
+        businessId: businessCustomer.id,
         isActive: true
       }
     })

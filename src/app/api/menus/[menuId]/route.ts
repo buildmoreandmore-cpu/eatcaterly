@@ -1,13 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { getCurrentUserBusinessId } from '@/lib/auth-utils.server'
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ menuId: string }> }
 ) {
   try {
+    const businessId = await getCurrentUserBusinessId()
+    if (!businessId) {
+      return NextResponse.json(
+        { error: 'Business not found for current user' },
+        { status: 404 }
+      )
+    }
+
     const { menuId } = await params
     const { title, isActive, menuItems } = await request.json()
+
+    // Verify menu belongs to this business
+    const existingMenu = await prisma.menu.findFirst({
+      where: {
+        id: menuId,
+        businessId
+      }
+    })
+
+    if (!existingMenu) {
+      return NextResponse.json(
+        { error: 'Menu not found or access denied' },
+        { status: 404 }
+      )
+    }
 
     const updateData: any = {}
     if (title !== undefined) updateData.title = title
@@ -36,7 +60,30 @@ export async function DELETE(
   { params }: { params: Promise<{ menuId: string }> }
 ) {
   try {
+    const businessId = await getCurrentUserBusinessId()
+    if (!businessId) {
+      return NextResponse.json(
+        { error: 'Business not found for current user' },
+        { status: 404 }
+      )
+    }
+
     const { menuId } = await params
+
+    // Verify menu belongs to this business
+    const existingMenu = await prisma.menu.findFirst({
+      where: {
+        id: menuId,
+        businessId
+      }
+    })
+
+    if (!existingMenu) {
+      return NextResponse.json(
+        { error: 'Menu not found or access denied' },
+        { status: 404 }
+      )
+    }
 
     // Delete menu items first (cascade delete)
     await prisma.menuItem.deleteMany({

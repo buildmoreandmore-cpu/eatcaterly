@@ -1,12 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { getCurrentUserBusinessId } from '@/lib/auth-utils.server'
 
 export async function GET(request: NextRequest) {
   try {
+    const businessId = await getCurrentUserBusinessId()
+    if (!businessId) {
+      return NextResponse.json(
+        { error: 'Business not found for current user' },
+        { status: 404 }
+      )
+    }
+
     const { searchParams } = new URL(request.url)
     const date = searchParams.get('date')
 
-    const whereCondition = date ? { date: new Date(date) } : {}
+    const whereCondition: any = { businessId }
+    if (date) {
+      whereCondition.date = new Date(date)
+    }
 
     const menus = await prisma.menu.findMany({
       where: whereCondition,
@@ -32,6 +44,14 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const businessId = await getCurrentUserBusinessId()
+    if (!businessId) {
+      return NextResponse.json(
+        { error: 'Business not found for current user' },
+        { status: 404 }
+      )
+    }
+
     const { title, date, menuItems } = await request.json()
 
     if (!title || !date) {
@@ -41,9 +61,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if menu already exists for this date
+    // Check if menu already exists for this business on this date
     const existingMenu = await prisma.menu.findFirst({
-      where: { date: new Date(date) }
+      where: {
+        businessId,
+        date: new Date(date)
+      }
     })
 
     if (existingMenu) {
@@ -55,6 +78,7 @@ export async function POST(request: NextRequest) {
 
     const menu = await prisma.menu.create({
       data: {
+        businessId,
         title,
         date: new Date(date),
         isActive: true,

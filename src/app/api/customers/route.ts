@@ -1,15 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { getCurrentUserBusinessId } from '@/lib/auth-utils.server'
 
 export async function GET(request: NextRequest) {
   try {
+    const businessId = await getCurrentUserBusinessId()
+    if (!businessId) {
+      return NextResponse.json(
+        { error: 'Business not found for current user' },
+        { status: 404 }
+      )
+    }
+
     const { searchParams } = new URL(request.url)
     const category = searchParams.get('category')
     const tags = searchParams.get('tags')
     const includeInactive = searchParams.get('includeInactive') === 'true'
 
     // Build where clause for filtering
-    const where: any = {}
+    const where: any = { businessId }
 
     if (!includeInactive) {
       where.isActive = true
@@ -66,6 +75,14 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const businessId = await getCurrentUserBusinessId()
+    if (!businessId) {
+      return NextResponse.json(
+        { error: 'Business not found for current user' },
+        { status: 404 }
+      )
+    }
+
     const { phoneNumber, name, email, category, tags, notes } = await request.json()
 
     if (!phoneNumber) {
@@ -92,9 +109,12 @@ export async function POST(request: NextRequest) {
 
     const normalizedPhone = normalizePhoneNumber(phoneNumber)
 
-    // Check if customer already exists
-    const existingCustomer = await prisma.customer.findUnique({
-      where: { phoneNumber: normalizedPhone }
+    // Check if customer already exists for this business
+    const existingCustomer = await prisma.customer.findFirst({
+      where: {
+        businessId,
+        phoneNumber: normalizedPhone
+      }
     })
 
     if (existingCustomer) {
@@ -106,6 +126,7 @@ export async function POST(request: NextRequest) {
 
     const customer = await prisma.customer.create({
       data: {
+        businessId,
         phoneNumber: normalizedPhone,
         name: name || null,
         email: email || null,
@@ -137,6 +158,14 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const businessId = await getCurrentUserBusinessId()
+    if (!businessId) {
+      return NextResponse.json(
+        { error: 'Business not found for current user' },
+        { status: 404 }
+      )
+    }
+
     const url = new URL(request.url)
     const customerId = url.searchParams.get('id')
 
@@ -144,6 +173,21 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json(
         { error: 'Customer ID is required' },
         { status: 400 }
+      )
+    }
+
+    // Verify customer belongs to this business
+    const customer = await prisma.customer.findFirst({
+      where: {
+        id: customerId,
+        businessId
+      }
+    })
+
+    if (!customer) {
+      return NextResponse.json(
+        { error: 'Customer not found or access denied' },
+        { status: 404 }
       )
     }
 
@@ -163,12 +207,35 @@ export async function DELETE(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
+    const businessId = await getCurrentUserBusinessId()
+    if (!businessId) {
+      return NextResponse.json(
+        { error: 'Business not found for current user' },
+        { status: 404 }
+      )
+    }
+
     const { id, phoneNumber, name, email, category, tags, notes, isActive } = await request.json()
 
     if (!id) {
       return NextResponse.json(
         { error: 'Customer ID is required' },
         { status: 400 }
+      )
+    }
+
+    // Verify customer belongs to this business
+    const existingCustomer = await prisma.customer.findFirst({
+      where: {
+        id,
+        businessId
+      }
+    })
+
+    if (!existingCustomer) {
+      return NextResponse.json(
+        { error: 'Customer not found or access denied' },
+        { status: 404 }
       )
     }
 

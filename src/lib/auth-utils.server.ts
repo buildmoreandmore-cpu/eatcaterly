@@ -1,4 +1,5 @@
 import { currentUser } from '@clerk/nextjs/server'
+import { prisma } from './db'
 
 const ADMIN_EMAIL = 'eatcaterly@gmail.com'
 
@@ -52,6 +53,35 @@ export async function getCurrentUserEmail(): Promise<string | null> {
     )?.emailAddress || null
   } catch (error) {
     console.error('Error getting user email:', error)
+    return null
+  }
+}
+
+/**
+ * Get the current user's business ID (SERVER-ONLY)
+ * @returns business ID or null
+ */
+export async function getCurrentUserBusinessId(): Promise<string | null> {
+  try {
+    const email = await getCurrentUserEmail()
+    if (!email) {
+      console.error('[getCurrentUserBusinessId] No email found for current user')
+      return null
+    }
+
+    const business = await prisma.businessCustomer.findUnique({
+      where: { contactEmail: email },
+      select: { id: true }
+    })
+
+    if (!business) {
+      console.error('[getCurrentUserBusinessId] No business found for email:', email)
+      return null
+    }
+
+    return business.id
+  } catch (error) {
+    console.error('[getCurrentUserBusinessId] Error:', error)
     return null
   }
 }

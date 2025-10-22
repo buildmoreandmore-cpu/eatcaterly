@@ -26,10 +26,12 @@ model Customer {
   lastOrderAt DateTime? // Track last order date
   totalOrders Int       @default(0) // Track total order count
   totalSpent  Int       @default(0) // Track total amount spent (in cents)
+  businessId  String // Which business owns this customer
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
   // Relations
+  businessCustomer    BusinessCustomer @relation(fields: [businessId], references: [id])
   orders              Order[]
   smsLogs             SmsLog[]
   customerListMembers CustomerListMember[]
@@ -81,6 +83,8 @@ model BusinessCustomer {
   updatedAt DateTime @updatedAt
 
   // Relations
+  customers     Customer[]
+  menus         Menu[]
   customerLists CustomerList[]
   orders        Order[]
 
@@ -192,17 +196,21 @@ model CustomerListMember {
 }
 
 model Menu {
-  id        String   @id @default(cuid())
-  date      DateTime @unique @db.Date
-  title     String?
-  isActive  Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(cuid())
+  date       DateTime @db.Date
+  title      String?
+  isActive   Boolean  @default(false)
+  businessId String // Which business owns this menu
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   // Relations
-  menuItems MenuItem[]
-  orders    Order[]
+  businessCustomer BusinessCustomer @relation(fields: [businessId], references: [id])
+  menuItems        MenuItem[]
+  orders           Order[]
 
+  // Each business can only have one menu per date
+  @@unique([businessId, date])
   @@map("menus")
 }
 
