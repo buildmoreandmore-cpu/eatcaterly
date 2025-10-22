@@ -17,6 +17,13 @@ interface Customer {
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [formData, setFormData] = useState({
+    name: '',
+    phoneNumber: '',
+    email: '',
+  })
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search)

@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db'
 import { assignNumber } from '@/lib/phone-inventory'
-
-const ADMIN_EMAIL = 'eatcaterly@gmail.com'
+import { isAdmin, getCurrentUserEmail } from '@/lib/auth-utils.server'
 
 /**
  * POST /api/admin/phone-numbers/assign
@@ -12,10 +11,20 @@ const ADMIN_EMAIL = 'eatcaterly@gmail.com'
 export async function POST(req: NextRequest) {
   try {
     // Verify admin authentication
-    const { sessionClaims } = await auth()
-    const userEmail = sessionClaims?.email as string
+    const { userId } = await auth()
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'Unauthorized. Please sign in.' },
+        { status: 401 }
+      )
+    }
 
-    if (userEmail !== ADMIN_EMAIL) {
+    const userIsAdmin = await isAdmin()
+    const userEmail = await getCurrentUserEmail()
+
+    console.log('[Phone Assignment] User attempting assignment:', { userEmail, userIsAdmin })
+
+    if (!userIsAdmin) {
       return NextResponse.json(
         { error: 'Unauthorized. Admin access only.' },
         { status: 403 }

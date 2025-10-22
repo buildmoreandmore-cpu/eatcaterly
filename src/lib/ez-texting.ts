@@ -56,6 +56,18 @@ interface DetailsResult {
   error?: string
 }
 
+interface SendSMSParams {
+  to: string
+  from: string
+  message: string
+}
+
+interface SendSMSResult {
+  success: boolean
+  messageId?: string
+  error?: string
+}
+
 /**
  * Provision a phone number from EZ Texting with area code fallback
  */
@@ -271,6 +283,68 @@ async function getPhoneNumberDetails(numberId: string): Promise<DetailsResult> {
     return {
       success: false,
       error: error.message || 'Network error while fetching phone number details',
+    }
+  }
+}
+
+/**
+ * Send an SMS message via EZTexting
+ */
+export async function sendSMS(params: SendSMSParams): Promise<SendSMSResult> {
+  const { to, from, message } = params
+
+  try {
+    getAuthHeader() // Validate credentials exist
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.message || 'EZTexting credentials not configured',
+    }
+  }
+
+  try {
+    // Format phone numbers (EZTexting expects format like +14041234567 or 14041234567)
+    const formattedTo = to.replace(/[^\d+]/g, '')
+    const formattedFrom = from.replace(/[^\d+]/g, '')
+
+    const response = await fetch(`${EZ_TEXTING_API_URL}/sending/messages`, {
+      method: 'POST',
+      headers: {
+        'Authorization': getAuthHeader(),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        PhoneNumbers: [formattedTo],
+        Message: message,
+        From: formattedFrom,
+      }),
+    })
+
+    if (response.ok) {
+      const data = await response.json()
+      return {
+        success: true,
+        messageId: data.Entry?.MessageID || data.messageId || 'unknown',
+      }
+    }
+
+    // Handle authentication errors
+    if (response.status === 401) {
+      return {
+        success: false,
+        error: 'EZ Texting authentication failed. Please check API credentials.',
+      }
+    }
+
+    const errorData = await response.json().catch(() => ({}))
+    return {
+      success: false,
+      error: errorData.error || errorData.Response?.Errors?.[0]?.Message || `Failed to send SMS: ${response.status}`,
+    }
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.message || 'Network error while sending SMS',
     }
   }
 }

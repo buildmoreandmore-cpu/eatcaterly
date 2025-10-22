@@ -8,7 +8,8 @@ import {
   MessageSquare,
   Phone,
   Settings,
-  Menu as MenuIcon
+  Menu as MenuIcon,
+  Send
 } from 'lucide-react'
 
 interface BusinessStats {
@@ -77,7 +78,6 @@ async function getTodaysMenu(businessId: string) {
 
     const menu = await prisma.menu.findFirst({
       where: {
-        businessId,
         date: {
           gte: today,
           lt: tomorrow
@@ -222,6 +222,14 @@ export default async function BusinessDashboard() {
             )}
           </div>
         </div>
+        <div className="mt-4 md:mt-0">
+          <Link href="/admin/broadcast">
+            <button className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold shadow-sm transition-colors">
+              <Send className="h-5 w-5" />
+              Broadcast Menu
+            </button>
+          </Link>
+        </div>
       </div>
 
       {/* Stats Grid */}
@@ -287,13 +295,10 @@ export default async function BusinessDashboard() {
           ) : (
             <div>
               <div className="mb-4">
-                <h4 className="font-medium text-gray-900">{todaysMenu.name}</h4>
-                {todaysMenu.description && (
-                  <p className="text-sm text-gray-600 mt-1">{todaysMenu.description}</p>
-                )}
+                <h4 className="font-medium text-gray-900">{todaysMenu.title || 'Today\'s Menu'}</h4>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {todaysMenu.menuItems.map((item) => (
+                {todaysMenu.menuItems.map((item: any) => (
                   <div
                     key={item.id}
                     className="border border-gray-200 rounded-lg p-3 hover:border-blue-300 transition-colors"
