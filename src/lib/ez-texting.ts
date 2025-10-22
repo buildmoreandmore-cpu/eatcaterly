@@ -12,7 +12,15 @@ function getAuthHeader(): string {
   if (!EZTEXTING_USERNAME || !EZTEXTING_PASSWORD) {
     throw new Error('EZTexting credentials not configured')
   }
-  const credentials = Buffer.from(`${EZTEXTING_USERNAME}:${EZTEXTING_PASSWORD}`).toString('base64')
+
+  // Use Buffer in Node.js environment (API routes)
+  if (typeof Buffer !== 'undefined') {
+    const credentials = Buffer.from(`${EZTEXTING_USERNAME}:${EZTEXTING_PASSWORD}`).toString('base64')
+    return `Basic ${credentials}`
+  }
+
+  // Fallback for environments without Buffer
+  const credentials = btoa(`${EZTEXTING_USERNAME}:${EZTEXTING_PASSWORD}`)
   return `Basic ${credentials}`
 }
 
