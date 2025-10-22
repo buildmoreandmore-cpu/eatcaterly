@@ -52,10 +52,12 @@ interface DetailsResult {
  * Provision a phone number from EZ Texting with area code fallback
  */
 async function provisionPhoneNumber(requestedAreaCode: string): Promise<ProvisionResult> {
-  if (!EZ_TEXTING_API_KEY) {
+  try {
+    getAuthHeader() // Validate credentials exist
+  } catch (error: any) {
     return {
       success: false,
-      error: 'EZ Texting API key not configured',
+      error: error.message || 'EZTexting credentials not configured',
     }
   }
 
@@ -67,10 +69,10 @@ async function provisionPhoneNumber(requestedAreaCode: string): Promise<Provisio
     const fallbackUsed = i > 0
 
     try {
-      const response = await fetch(`${EZ_TEXTING_API_URL}/available-numbers`, {
+      const response = await fetch(`${EZ_TEXTING_API_URL}/sending/numbers`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${EZ_TEXTING_API_KEY}`,
+          'Authorization': getAuthHeader(),
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -133,10 +135,12 @@ async function provisionPhoneNumber(requestedAreaCode: string): Promise<Provisio
  * Release a phone number back to EZ Texting
  */
 async function releasePhoneNumber(numberId: string): Promise<ReleaseResult> {
-  if (!EZ_TEXTING_API_KEY) {
+  try {
+    getAuthHeader() // Validate credentials exist
+  } catch (error: any) {
     return {
       success: false,
-      error: 'EZ Texting API key not configured',
+      error: error.message || 'EZTexting credentials not configured',
     }
   }
 
@@ -144,7 +148,7 @@ async function releasePhoneNumber(numberId: string): Promise<ReleaseResult> {
     const response = await fetch(`${EZ_TEXTING_API_URL}/numbers/${numberId}`, {
       method: 'DELETE',
       headers: {
-        'Authorization': `Bearer ${EZ_TEXTING_API_KEY}`,
+        'Authorization': getAuthHeader(),
       },
     })
 
@@ -179,10 +183,12 @@ async function listPhoneNumbers(): Promise<{
   }>
   error?: string
 }> {
-  if (!EZ_TEXTING_API_KEY) {
+  try {
+    getAuthHeader() // Validate credentials exist
+  } catch (error: any) {
     return {
       success: false,
-      error: 'EZ Texting API key not configured',
+      error: error.message || 'EZTexting credentials not configured',
     }
   }
 
@@ -190,7 +196,7 @@ async function listPhoneNumbers(): Promise<{
     const response = await fetch(`${EZ_TEXTING_API_URL}/numbers`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${EZ_TEXTING_API_KEY}`,
+        'Authorization': getAuthHeader(),
       },
     })
 
@@ -219,10 +225,12 @@ async function listPhoneNumbers(): Promise<{
  * Get details about a provisioned phone number
  */
 async function getPhoneNumberDetails(numberId: string): Promise<DetailsResult> {
-  if (!EZ_TEXTING_API_KEY) {
+  try {
+    getAuthHeader() // Validate credentials exist
+  } catch (error: any) {
     return {
       success: false,
-      error: 'EZ Texting API key not configured',
+      error: error.message || 'EZTexting credentials not configured',
     }
   }
 
@@ -230,7 +238,7 @@ async function getPhoneNumberDetails(numberId: string): Promise<DetailsResult> {
     const response = await fetch(`${EZ_TEXTING_API_URL}/numbers/${numberId}`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${EZ_TEXTING_API_KEY}`,
+        'Authorization': getAuthHeader(),
       },
     })
 
