@@ -100,7 +100,8 @@ export async function POST(request: NextRequest) {
             description: item.description,
             price: item.price,
             category: item.category,
-            isAvailable: true
+            isAvailable: true,
+            businessId // Add businessId to each menu item for easier querying
           }))
         }
       },

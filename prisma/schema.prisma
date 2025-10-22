@@ -86,6 +86,7 @@ model BusinessCustomer {
   // Relations
   customers     Customer[]
   menus         Menu[]
+  menuItems     MenuItem[]
   customerLists CustomerList[]
   orders        Order[]
 
@@ -218,6 +219,7 @@ model Menu {
 model MenuItem {
   id          String  @id @default(cuid())
   menuId      String
+  businessId  String  // Denormalized for easier admin queries
   name        String
   description String?
   price       Int // Price in cents
@@ -226,8 +228,10 @@ model MenuItem {
   imageUrl    String?
 
   // Relations
-  menu Menu @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  menu             Menu             @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  businessCustomer BusinessCustomer @relation(fields: [businessId], references: [id])
 
+  @@index([businessId])
   @@map("menu_items")
 }
 
