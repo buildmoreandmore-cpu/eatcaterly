@@ -44,12 +44,19 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { menuId, customerIds } = await request.json()
+    const { menuId, customerIds, customMessage } = await request.json()
 
     // Validate inputs
     if (!menuId || !customerIds || !Array.isArray(customerIds) || customerIds.length === 0) {
       return NextResponse.json(
         { success: false, error: 'Menu ID and customer IDs are required' },
+        { status: 400 }
+      )
+    }
+
+    if (!customMessage || !customMessage.trim()) {
+      return NextResponse.json(
+        { success: false, error: 'Custom message is required' },
         { status: 400 }
       )
     }
@@ -85,15 +92,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Format menu message
-    const menuTitle = menu.title || `Menu for ${new Date(menu.date).toLocaleDateString()}`
-    const menuDate = new Date(menu.date).toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'long',
-      day: 'numeric'
-    })
+    // Format menu message with custom message
+    let message = customMessage.trim() + '\n\n'
 
-    let message = `🍽️ ${menuTitle}\n📅 ${menuDate}\n\n`
+    // Add menu title
+    const menuTitle = menu.title || `Menu for ${new Date(menu.date).toLocaleDateString()}`
+    message += `🍽️ ${menuTitle}\n\n`
 
     // Group items by category
     const categories = new Map<string, typeof menu.menuItems>()
@@ -124,8 +128,6 @@ export async function POST(request: NextRequest) {
       })
       message += `\n`
     })
-
-    message += `\nReply to this message to place your order! 🎉`
 
     console.log('[Broadcast] Sending to', customers.length, 'customers')
     console.log('[Broadcast] Message preview:', message.substring(0, 100) + '...')

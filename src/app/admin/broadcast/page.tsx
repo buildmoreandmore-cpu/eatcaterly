@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Send, Users, Calendar, CheckSquare, Square, Loader2, X } from 'lucide-react'
+import { Send, Users, Calendar, CheckSquare, Square, Loader2, X, MessageSquare } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 interface MenuItem {
@@ -35,6 +35,7 @@ export default function BroadcastMenuPage() {
   const [customers, setCustomers] = useState<Customer[]>([])
   const [selectedMenuId, setSelectedMenuId] = useState<string>('')
   const [selectedCustomerIds, setSelectedCustomerIds] = useState<Set<string>>(new Set())
+  const [customMessage, setCustomMessage] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -44,6 +45,24 @@ export default function BroadcastMenuPage() {
   useEffect(() => {
     loadData()
   }, [])
+
+  // Generate default message when menu is selected
+  useEffect(() => {
+    if (selectedMenuId && menus.length > 0) {
+      const menu = menus.find(m => m.id === selectedMenuId)
+      if (menu && !customMessage) {
+        const menuTitle = menu.title || `Today's Menu`
+        const menuDate = new Date(menu.date).toLocaleDateString('en-US', {
+          weekday: 'long',
+          month: 'long',
+          day: 'numeric'
+        })
+
+        const defaultMessage = `Hi! Check out our delicious menu for ${menuDate}!\n\nReply to this message to place your order. We can't wait to serve you!`
+        setCustomMessage(defaultMessage)
+      }
+    }
+  }, [selectedMenuId, menus])
 
   async function loadData() {
     try {
@@ -102,6 +121,11 @@ export default function BroadcastMenuPage() {
       return
     }
 
+    if (!customMessage.trim()) {
+      setError('Please enter a message to send to your customers')
+      return
+    }
+
     try {
       setSending(true)
       setError(null)
@@ -111,7 +135,8 @@ export default function BroadcastMenuPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           menuId: selectedMenuId,
-          customerIds: Array.from(selectedCustomerIds)
+          customerIds: Array.from(selectedCustomerIds),
+          customMessage: customMessage
         })
       })
 
@@ -287,6 +312,29 @@ export default function BroadcastMenuPage() {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Custom Message */}
+        {selectedMenuId && (
+          <div className="bg-white border rounded-lg p-6 mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <MessageSquare className="h-5 w-5 text-blue-600" />
+              <h2 className="text-xl font-bold">Your Message</h2>
+            </div>
+            <p className="text-sm text-gray-600 mb-3">
+              Customize the message your customers will receive. The menu details will be included automatically.
+            </p>
+            <textarea
+              value={customMessage}
+              onChange={(e) => setCustomMessage(e.target.value)}
+              placeholder="Enter your message to customers..."
+              rows={4}
+              className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            />
+            <p className="text-xs text-gray-500 mt-2">
+              {customMessage.length} characters
+            </p>
           </div>
         )}
 
