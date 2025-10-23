@@ -437,8 +437,7 @@ export default function MenuManagementPage() {
                   </button>
                   <button
                     onClick={handleCreateMenu}
-                    disabled={!title || !date || menuItems.length === 0}
-                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed"
+                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
                   >
                     Create Menu
                   </button>
