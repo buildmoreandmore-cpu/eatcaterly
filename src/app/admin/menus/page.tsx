@@ -121,8 +121,15 @@ export default function MenuManagementPage() {
   }
 
   async function handleCreateMenu() {
-    if (!title || !date || menuItems.length === 0) {
-      alert('Please enter title, date, and at least one menu item')
+    console.log('Create menu clicked - State:', { title, date, menuItems })
+
+    const missing = []
+    if (!title) missing.push('title')
+    if (!date) missing.push('date')
+    if (menuItems.length === 0) missing.push('at least one menu item')
+
+    if (missing.length > 0) {
+      alert(`Please enter: ${missing.join(', ')}`)
       return
     }
 
