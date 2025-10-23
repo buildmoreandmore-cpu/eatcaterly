@@ -50,6 +50,12 @@ export default function PhoneInventoryPage() {
   const [selectedBusinessId, setSelectedBusinessId] = useState('')
   const [assigning, setAssigning] = useState(false)
 
+  // Reassignment modal state
+  const [showReassignModal, setShowReassignModal] = useState(false)
+  const [allBusinesses, setAllBusinesses] = useState<Business[]>([])
+  const [reassigning, setReassigning] = useState(false)
+  const [currentBusiness, setCurrentBusiness] = useState<Business | null>(null)
+
   const loadNumbers = async () => {
     setLoading(true)
     try {
@@ -167,6 +173,85 @@ export default function PhoneInventoryPage() {
       alert('Assignment failed')
     } finally {
       setAssigning(false)
+    }
+  }
+
+  const loadAllBusinesses = async () => {
+    try {
+      const response = await fetch('/api/admin/businesses')
+      const data = await response.json()
+
+      if (data.success) {
+        setAllBusinesses(data.businesses)
+      }
+    } catch (error) {
+      console.error('Failed to load businesses:', error)
+    }
+  }
+
+  const openReassignModal = async (number: PhoneNumber) => {
+    setSelectedNumber(number)
+    setSelectedBusinessId('')
+    setShowReassignModal(true)
+
+    // Load the current business info
+    if (number.currentBusinessId) {
+      try {
+        const response = await fetch(`/api/admin/businesses`)
+        const data = await response.json()
+        if (data.success) {
+          const current = data.businesses.find((b: Business) => b.id === number.currentBusinessId)
+          setCurrentBusiness(current || null)
+          setAllBusinesses(data.businesses.filter((b: Business) => b.id !== number.currentBusinessId))
+        }
+      } catch (error) {
+        console.error('Failed to load businesses:', error)
+      }
+    }
+  }
+
+  const closeReassignModal = () => {
+    setShowReassignModal(false)
+    setSelectedNumber(null)
+    setSelectedBusinessId('')
+    setCurrentBusiness(null)
+  }
+
+  const reassignNumber = async () => {
+    if (!selectedNumber || !selectedBusinessId || !currentBusiness) {
+      alert('Please select a business')
+      return
+    }
+
+    setReassigning(true)
+    try {
+      const response = await fetch('/api/admin/phone-numbers/reassign', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fromBusinessId: currentBusiness.id,
+          toBusinessId: selectedBusinessId,
+          phoneNumber: selectedNumber.phoneNumber,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        alert(`Success! ${selectedNumber.phoneNumber} reassigned from ${currentBusiness.businessName} to ${data.toBusiness.businessName}`)
+        closeReassignModal()
+        loadNumbers()
+        loadStats()
+      } else {
+        alert(`Reassignment failed: ${data.error}`)
+      }
+    } catch (error) {
+      console.error('Failed to reassign number:', error)
+      alert('Reassignment failed')
+    } finally {
+      setReassigning(false)
     }
   }
 
@@ -398,6 +483,14 @@ export default function PhoneInventoryPage() {
                           Assign
                         </button>
                       )}
+                      {number.status === 'ASSIGNED' && (
+                        <button
+                          onClick={() => openReassignModal(number)}
+                          className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors"
+                        >
+                          Reassign
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -469,6 +562,74 @@ export default function PhoneInventoryPage() {
                   className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
                 >
                   {assigning ? 'Assigning...' : 'Assign Number'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Reassign Number Modal */}
+        {showReassignModal && selectedNumber && currentBusiness && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                Reassign Phone Number
+              </h2>
+
+              <div className="mb-6">
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
+                  <div className="text-sm text-gray-600 mb-1">Phone Number</div>
+                  <div className="text-xl font-bold text-gray-900">
+                    {selectedNumber.phoneNumber}
+                  </div>
+                  <div className="text-sm text-gray-500 mt-1">
+                    Area Code: {selectedNumber.areaCode}
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
+                  <div className="text-sm text-gray-600 mb-1">Currently Assigned To</div>
+                  <div className="font-bold text-gray-900">{currentBusiness.businessName}</div>
+                  <div className="text-sm text-gray-500">{currentBusiness.email}</div>
+                </div>
+
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Reassign To (different business)
+                </label>
+                <select
+                  value={selectedBusinessId}
+                  onChange={(e) => setSelectedBusinessId(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                >
+                  <option value="">Choose a business...</option>
+                  {allBusinesses.map((business) => (
+                    <option key={business.id} value={business.id}>
+                      {business.businessName} - {business.email} ({business.zipCode})
+                    </option>
+                  ))}
+                </select>
+
+                {allBusinesses.length === 0 && (
+                  <div className="mt-2 text-sm text-gray-500">
+                    No other businesses found.
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={closeReassignModal}
+                  disabled={reassigning}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={reassignNumber}
+                  disabled={!selectedBusinessId || reassigning}
+                  className="flex-1 bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 disabled:opacity-50 transition-colors"
+                >
+                  {reassigning ? 'Reassigning...' : 'Reassign Number'}
                 </button>
               </div>
             </div>
