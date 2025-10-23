@@ -3,25 +3,16 @@
  * Handles phone number provisioning and management
  */
 
-const EZ_TEXTING_API_URL = process.env.EZ_TEXTING_API_URL || 'https://app.eztexting.com'
-const EZTEXTING_USERNAME = process.env.EZTEXTING_USERNAME
-const EZTEXTING_PASSWORD = process.env.EZTEXTING_PASSWORD
+const EZ_TEXTING_API_URL = process.env.EZ_TEXTING_API_URL || 'https://api.eztexting.com/v2'
+const EZTEXTING_ACCESS_TOKEN = process.env.EZTEXTING_ACCESS_TOKEN || process.env.EZ_TEXTING_API_KEY
 
-// Create Basic Auth header
+// Create Bearer token auth header
 function getAuthHeader(): string {
-  if (!EZTEXTING_USERNAME || !EZTEXTING_PASSWORD) {
-    throw new Error('EZTexting credentials not configured')
+  if (!EZTEXTING_ACCESS_TOKEN) {
+    throw new Error('EZTexting access token not configured')
   }
 
-  // Use Buffer in Node.js environment (API routes)
-  if (typeof Buffer !== 'undefined') {
-    const credentials = Buffer.from(`${EZTEXTING_USERNAME}:${EZTEXTING_PASSWORD}`).toString('base64')
-    return `Basic ${credentials}`
-  }
-
-  // Fallback for environments without Buffer
-  const credentials = btoa(`${EZTEXTING_USERNAME}:${EZTEXTING_PASSWORD}`)
-  return `Basic ${credentials}`
+  return `Bearer ${EZTEXTING_ACCESS_TOKEN}`
 }
 
 // Atlanta area code fallbacks (404 → 470 → 678 → 770)
@@ -288,58 +279,58 @@ async function getPhoneNumberDetails(numberId: string): Promise<DetailsResult> {
 }
 
 /**
- * Send an SMS message via EZTexting
+ * Send an SMS message via EZTexting v2 API
  */
 export async function sendSMS(params: SendSMSParams): Promise<SendSMSResult> {
   const { to, from, message } = params
 
   // Validate credentials exist
-  if (!EZTEXTING_USERNAME || !EZTEXTING_PASSWORD) {
+  try {
+    getAuthHeader() // Will throw if token not configured
+  } catch (error: any) {
     return {
       success: false,
-      error: 'EZTexting credentials not configured',
+      error: error.message || 'EZTexting access token not configured',
     }
   }
 
   try {
-    // Format phone numbers to 10-digit format (EZTexting expects 10 digits, no +1)
+    // Format phone numbers to E.164 format (v2 API expects +1XXXXXXXXXX)
     const formatPhoneNumber = (phone: string): string => {
       // Remove all non-digit characters
       const digitsOnly = phone.replace(/\D/g, '')
 
-      // If it starts with 1 and has 11 digits, remove the 1
+      // If it starts with 1 and has 11 digits, add +
       if (digitsOnly.length === 11 && digitsOnly.startsWith('1')) {
-        return digitsOnly.substring(1)
+        return `+${digitsOnly}`
       }
 
-      // If it has 10 digits, use as is
+      // If it has 10 digits, add +1
       if (digitsOnly.length === 10) {
-        return digitsOnly
+        return `+1${digitsOnly}`
       }
 
-      // Otherwise, return the digits as is (may cause API error, but will be logged)
-      return digitsOnly
+      // Otherwise, try to add +1 prefix
+      return `+1${digitsOnly}`
     }
 
     const formattedTo = formatPhoneNumber(to)
     const formattedFrom = formatPhoneNumber(from)
 
-    console.log('[EZTexting] Sending SMS:', { to: formattedTo, from: formattedFrom, messageLength: message.length })
+    console.log('[EZTexting] Sending SMS via v2 API:', { to: formattedTo, from: formattedFrom, messageLength: message.length })
 
-    // Build URL-encoded form data (EZTexting uses form data, not JSON)
-    const formData = new URLSearchParams()
-    formData.append('User', EZTEXTING_USERNAME)
-    formData.append('Password', EZTEXTING_PASSWORD)
-    formData.append('PhoneNumbers[]', formattedTo)
-    formData.append('Message', message)
-    formData.append('Subject', formattedFrom) // Subject shows as sender on some carriers
-
-    const response = await fetch(`${EZ_TEXTING_API_URL}/sending/messages?format=json`, {
+    // Use v2 API with JSON and Bearer token
+    const response = await fetch(`${EZ_TEXTING_API_URL}/messages`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': getAuthHeader(),
+        'Content-Type': 'application/json',
       },
-      body: formData.toString(),
+      body: JSON.stringify({
+        to: formattedTo,
+        from: formattedFrom,
+        body: message,
+      }),
     })
 
     if (!response.ok) {
@@ -357,7 +348,7 @@ export async function sendSMS(params: SendSMSParams): Promise<SendSMSResult> {
       if (response.status === 401) {
         return {
           success: false,
-          error: 'EZ Texting authentication failed. Please check API credentials.',
+          error: 'EZ Texting authentication failed. Please check API access token.',
         }
       }
 
@@ -370,19 +361,9 @@ export async function sendSMS(params: SendSMSParams): Promise<SendSMSResult> {
     const data = await response.json()
     console.log('[EZTexting] SMS sent successfully:', data)
 
-    // Check for errors in the response
-    if (data.Response?.Status === 'Failure' || data.Response?.Errors) {
-      const errorMsg = data.Response?.Errors?.[0]?.Message || 'Unknown error from EZTexting'
-      console.error('[EZTexting] API returned error:', errorMsg)
-      return {
-        success: false,
-        error: errorMsg,
-      }
-    }
-
     return {
       success: true,
-      messageId: data.Response?.Entry?.MessageID || data.Entry?.MessageID || 'unknown',
+      messageId: data.id || data.messageId || 'unknown',
     }
   } catch (error: any) {
     console.error('[EZTexting] Exception while sending SMS:', error)
