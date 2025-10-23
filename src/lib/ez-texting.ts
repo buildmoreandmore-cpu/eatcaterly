@@ -293,38 +293,32 @@ async function getPhoneNumberDetails(numberId: string): Promise<DetailsResult> {
 export async function sendSMS(params: SendSMSParams): Promise<SendSMSResult> {
   const { to, from, message } = params
 
-  try {
-    getAuthHeader() // Validate credentials exist
-  } catch (error: any) {
+  // Validate credentials exist
+  if (!EZTEXTING_USERNAME || !EZTEXTING_PASSWORD) {
     return {
       success: false,
-      error: error.message || 'EZTexting credentials not configured',
+      error: 'EZTexting credentials not configured',
     }
   }
 
   try {
-    // Format phone numbers to E.164 format (EZTexting requires +1XXXXXXXXXX for US numbers)
+    // Format phone numbers to 10-digit format (EZTexting expects 10 digits, no +1)
     const formatPhoneNumber = (phone: string): string => {
       // Remove all non-digit characters
       const digitsOnly = phone.replace(/\D/g, '')
 
-      // If it already starts with 1 and has 11 digits, add +
+      // If it starts with 1 and has 11 digits, remove the 1
       if (digitsOnly.length === 11 && digitsOnly.startsWith('1')) {
-        return `+${digitsOnly}`
+        return digitsOnly.substring(1)
       }
 
-      // If it has 10 digits (US number without country code), add +1
+      // If it has 10 digits, use as is
       if (digitsOnly.length === 10) {
-        return `+1${digitsOnly}`
+        return digitsOnly
       }
 
-      // If it already has +, use as is
-      if (phone.startsWith('+')) {
-        return phone
-      }
-
-      // Fallback: assume US number and add +1
-      return `+1${digitsOnly}`
+      // Otherwise, return the digits as is (may cause API error, but will be logged)
+      return digitsOnly
     }
 
     const formattedTo = formatPhoneNumber(to)
@@ -332,49 +326,66 @@ export async function sendSMS(params: SendSMSParams): Promise<SendSMSResult> {
 
     console.log('[EZTexting] Sending SMS:', { to: formattedTo, from: formattedFrom, messageLength: message.length })
 
-    const response = await fetch(`${EZ_TEXTING_API_URL}/sending/messages`, {
+    // Build URL-encoded form data (EZTexting uses form data, not JSON)
+    const formData = new URLSearchParams()
+    formData.append('User', EZTEXTING_USERNAME)
+    formData.append('Password', EZTEXTING_PASSWORD)
+    formData.append('PhoneNumbers[]', formattedTo)
+    formData.append('Message', message)
+    formData.append('Subject', formattedFrom) // Subject shows as sender on some carriers
+
+    const response = await fetch(`${EZ_TEXTING_API_URL}/sending/messages?format=json`, {
       method: 'POST',
       headers: {
-        'Authorization': getAuthHeader(),
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: JSON.stringify({
-        PhoneNumbers: [formattedTo],
-        Message: message,
-        From: formattedFrom,
-      }),
+      body: formData.toString(),
     })
 
-    if (response.ok) {
-      const data = await response.json()
-      console.log('[EZTexting] SMS sent successfully:', data)
-      return {
-        success: true,
-        messageId: data.Entry?.MessageID || data.messageId || 'unknown',
-      }
-    }
+    if (!response.ok) {
+      // Try to parse error response
+      const errorText = await response.text()
+      console.error('[EZTexting] SMS send failed:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorText,
+        to: formattedTo,
+        from: formattedFrom
+      })
 
-    // Handle authentication errors
-    if (response.status === 401) {
-      console.error('[EZTexting] Authentication failed')
+      // Handle authentication errors
+      if (response.status === 401) {
+        return {
+          success: false,
+          error: 'EZ Texting authentication failed. Please check API credentials.',
+        }
+      }
+
       return {
         success: false,
-        error: 'EZ Texting authentication failed. Please check API credentials.',
+        error: `Failed to send SMS: ${response.status} ${response.statusText}`,
       }
     }
 
-    const errorData = await response.json().catch(() => ({}))
-    console.error('[EZTexting] SMS send failed:', {
-      status: response.status,
-      errorData,
-      to: formattedTo,
-      from: formattedFrom
-    })
+    const data = await response.json()
+    console.log('[EZTexting] SMS sent successfully:', data)
+
+    // Check for errors in the response
+    if (data.Response?.Status === 'Failure' || data.Response?.Errors) {
+      const errorMsg = data.Response?.Errors?.[0]?.Message || 'Unknown error from EZTexting'
+      console.error('[EZTexting] API returned error:', errorMsg)
+      return {
+        success: false,
+        error: errorMsg,
+      }
+    }
+
     return {
-      success: false,
-      error: errorData.error || errorData.Response?.Errors?.[0]?.Message || `Failed to send SMS: ${response.status}`,
+      success: true,
+      messageId: data.Response?.Entry?.MessageID || data.Entry?.MessageID || 'unknown',
     }
   } catch (error: any) {
+    console.error('[EZTexting] Exception while sending SMS:', error)
     return {
       success: false,
       error: error.message || 'Network error while sending SMS',
