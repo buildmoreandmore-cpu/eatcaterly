@@ -1,4 +1,4 @@
-import { currentUser } from '@clerk/nextjs/server'
+import { currentUser, auth as clerkAuth } from '@clerk/nextjs/server'
 import { prisma } from './db'
 
 const ADMIN_EMAIL = 'eatcaterly@gmail.com'
@@ -45,14 +45,32 @@ export async function isAdmin(): Promise<boolean> {
  */
 export async function getCurrentUserEmail(): Promise<string | null> {
   try {
-    const user = await currentUser()
-    if (!user) return null
+    // First try to get userId from auth() to ensure we have a session
+    const { userId } = await clerkAuth()
+    console.log('[getCurrentUserEmail] Auth userId:', userId)
 
-    return user.emailAddresses.find(
+    if (!userId) {
+      console.warn('[getCurrentUserEmail] No userId from auth()')
+      return null
+    }
+
+    // Now get the full user object
+    const user = await currentUser()
+    console.log('[getCurrentUserEmail] currentUser() returned:', !!user)
+
+    if (!user) {
+      console.warn('[getCurrentUserEmail] currentUser() returned null despite having userId')
+      return null
+    }
+
+    const userEmail = user.emailAddresses.find(
       email => email.id === user.primaryEmailAddressId
     )?.emailAddress || null
+
+    console.log('[getCurrentUserEmail] Found email:', userEmail)
+    return userEmail
   } catch (error) {
-    console.error('Error getting user email:', error)
+    console.error('[getCurrentUserEmail] Error:', error)
     return null
   }
 }
