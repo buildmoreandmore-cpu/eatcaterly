@@ -128,8 +128,17 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('[POST /api/customers] Error creating customer:', error)
     console.error('[POST /api/customers] Error stack:', error.stack)
+
+    // Check for unique constraint violation
+    if (error.code === 'P2002' && error.meta?.target?.includes('phoneNumber')) {
+      return NextResponse.json(
+        { error: 'A customer with this phone number already exists for your business' },
+        { status: 409 }
+      )
+    }
+
     return NextResponse.json(
-      { error: 'Failed to create customer' },
+      { error: 'Failed to create customer. Please try again or contact support if the issue persists.' },
       { status: 500 }
     )
   }
