@@ -355,3 +355,37 @@ export async function searchInventory(params: {
 
   return numbers as InventoryNumber[]
 }
+
+/**
+ * Reassign phone number from one business to another
+ */
+export async function reassignNumber(params: {
+  phoneNumberId: string
+  fromBusinessId: string
+  toBusinessId: string
+}): Promise<{
+  success: boolean
+  error?: string
+}> {
+  try {
+    const { phoneNumberId, fromBusinessId, toBusinessId } = params
+
+    // Update inventory to reflect reassignment
+    await prisma.phoneNumberInventory.update({
+      where: { id: phoneNumberId },
+      data: {
+        previousBusinessId: fromBusinessId,
+        currentBusinessId: toBusinessId,
+        assignedAt: new Date(),
+      },
+    })
+
+    return { success: true }
+  } catch (error: any) {
+    console.error('Error reassigning number:', error)
+    return {
+      success: false,
+      error: error.message || 'Failed to reassign number',
+    }
+  }
+}
