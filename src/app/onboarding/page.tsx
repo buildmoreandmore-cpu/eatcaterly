@@ -172,11 +172,26 @@ export default function OnboardingPage() {
       const data = await response.json()
 
       if (data.success) {
-        setResult(data)
+        // Skip success page and go directly to plan selection
+        const params = new URLSearchParams()
+
+        if (data.data?.businessId) {
+          params.set('businessId', data.data.businessId)
+        }
+
+        // Pass promo code if valid
+        if (promoValid && promoData) {
+          params.set('promoCode', formData.promoCode)
+          params.set('promoId', promoData.id)
+        }
+
+        // Redirect directly to plan selection
+        router.push(`/onboarding/plan?${params.toString()}`)
       } else {
-        setError(data.error || 'Failed to complete onboarding')
+        setError(data.error || 'Failed to complete setup. Please try again.')
       }
     } catch (err) {
+      console.error('Onboarding error:', err)
       setError('Network error. Please try again.')
     } finally {
       setIsLoading(false)

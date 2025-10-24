@@ -185,11 +185,33 @@ function PlanSelectionContent() {
         </div>
 
         {/* Header */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">Choose Your Plan</h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
             Select the plan that best fits your business needs. All plans include a 14-day free trial.
           </p>
+        </div>
+
+        {/* Phone Number Notice */}
+        <div className="max-w-3xl mx-auto mb-12">
+          <div className="bg-blue-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <svg className="h-6 w-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <h3 className="text-lg font-semibold text-blue-900 mb-2">
+                  Your Local Phone Number
+                </h3>
+                <p className="text-blue-800">
+                  A dedicated local phone number will be assigned to your business shortly after payment is confirmed.
+                  You'll receive an email notification once your number is ready.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Plan Cards */}
