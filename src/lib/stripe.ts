@@ -1,7 +1,6 @@
 import Stripe from 'stripe'
 import { prisma } from './db'
 import { isDemoMode, demoPaymentResult, demoWebhookResult } from './demo-mode'
-import ezTexting from './ez-texting'
 
 function getStripeClient() {
   if (!process.env.STRIPE_SECRET_KEY) {
@@ -238,6 +237,9 @@ export async function createPaymentLink(orderId: string): Promise<PaymentLinkRes
 
 /**
  * Handle business customer subscription checkout completion
+ *
+ * NOTE: EZ Texting does not support automated phone number provisioning via API.
+ * Phone numbers must be manually assigned by admin through the EatCaterly admin panel.
  */
 async function handleBusinessSubscriptionCheckout(session: Stripe.Checkout.Session) {
   try {
@@ -258,52 +260,24 @@ async function handleBusinessSubscriptionCheckout(session: Stripe.Checkout.Sessi
       return
     }
 
-    // Provision phone number with EZ Texting
-    console.log(`Provisioning phone number for business ${businessId} with area code ${business.areaCode}`)
-    const provisionResult = await ezTexting.provisionPhoneNumber(business.areaCode)
+    // Update business with Stripe subscription info
+    // Phone number will be manually assigned by admin later
+    await prisma.businessCustomer.update({
+      where: { id: businessId },
+      data: {
+        stripeCustomerId: session.customer as string,
+        stripeSubscriptionId: session.subscription as string,
+        subscriptionStatus: 'active',
+        subscriptionTier: plan,
+        onboardingCompleted: true,
+      },
+    })
 
-    if (provisionResult.success) {
-      // Update business with provisioned phone number
-      await prisma.businessCustomer.update({
-        where: { id: businessId },
-        data: {
-          assignedPhoneNumber: provisionResult.phoneNumber,
-          ezTextingNumberId: provisionResult.numberId,
-          numberProvisionedAt: new Date(),
-          areaCode: provisionResult.areaCode, // Update if fallback was used
-          stripeCustomerId: session.customer as string,
-          stripeSubscriptionId: session.subscription as string,
-          subscriptionStatus: 'active',
-          subscriptionTier: plan,
-          onboardingCompleted: true,
-        },
-      })
+    console.log(`✓ Subscription activated for business ${businessId}`)
+    console.log(`  Plan: ${plan}`)
+    console.log(`  ⚠️  Phone number pending manual assignment`)
 
-      console.log(`✓ Phone number provisioned: ${provisionResult.phoneNumber}`)
-      console.log(`✓ Onboarding completed for business ${businessId}`)
-
-      if (provisionResult.fallbackUsed) {
-        console.log(`  Note: Fallback area code ${provisionResult.areaCode} was used`)
-      }
-    } else {
-      // Log provisioning failure but don't fail the webhook
-      console.error(`Phone provisioning failed for business ${businessId}:`, provisionResult.error)
-
-      // Still update Stripe IDs and mark onboarding complete even if provisioning failed
-      // (Admin can manually assign a number later)
-      await prisma.businessCustomer.update({
-        where: { id: businessId },
-        data: {
-          stripeCustomerId: session.customer as string,
-          stripeSubscriptionId: session.subscription as string,
-          subscriptionStatus: 'trial',
-          subscriptionTier: plan,
-          onboardingCompleted: true,
-        },
-      })
-
-      console.log(`✓ Onboarding completed for business ${businessId} (phone provisioning pending)`)
-    }
+    // TODO: Send email notification to admin to assign phone number
   } catch (error) {
     console.error('Error handling business subscription checkout:', error)
     // Don't throw - we want to acknowledge the webhook even if processing fails
@@ -312,6 +286,9 @@ async function handleBusinessSubscriptionCheckout(session: Stripe.Checkout.Sessi
 
 /**
  * Handle subscription cancellation
+ *
+ * NOTE: Phone numbers must be manually released through EZ Texting dashboard.
+ * Admin should manually unassign number from business after cancellation.
  */
 async function handleSubscriptionCancellation(subscription: Stripe.Subscription) {
   try {
@@ -329,18 +306,6 @@ async function handleSubscriptionCancellation(subscription: Stripe.Subscription)
       return
     }
 
-    // Release phone number if we have one
-    if (business.ezTextingNumberId) {
-      console.log(`Releasing phone number for business ${business.id}`)
-      const releaseResult = await ezTexting.releasePhoneNumber(business.ezTextingNumberId)
-
-      if (releaseResult.success) {
-        console.log(`✓ Phone number released: ${business.assignedPhoneNumber}`)
-      } else {
-        console.error(`Phone release failed:`, releaseResult.error)
-      }
-    }
-
     // Deactivate business
     await prisma.businessCustomer.update({
       where: { id: business.id },
@@ -351,6 +316,11 @@ async function handleSubscriptionCancellation(subscription: Stripe.Subscription)
     })
 
     console.log(`✓ Business ${business.id} deactivated`)
+
+    if (business.assignedPhoneNumber) {
+      console.log(`  ⚠️  Phone number ${business.assignedPhoneNumber} should be manually unassigned in admin panel`)
+      // TODO: Send email notification to admin to unassign phone number
+    }
   } catch (error) {
     console.error('Error handling subscription cancellation:', error)
     // Don't throw - we want to acknowledge the webhook even if processing fails
