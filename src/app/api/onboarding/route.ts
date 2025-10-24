@@ -114,53 +114,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Smart number assignment: Check inventory first, then purchase if needed
+    // Phone numbers are now manually assigned by admin after payment
+    // No automatic provisioning during onboarding
     let phoneNumber: string | null = null
-    let inventoryId: string | undefined
+    let inventoryId: string | undefined = undefined
 
-    // Only provision phone number if not skipping
-    if (!skipPhoneProvisioning) {
-      // 1. Try to get number from inventory (available or cooldown expired)
-      const inventoryResult = await getAvailableNumber(areaCode)
-
-      if (inventoryResult.success && inventoryResult.number) {
-        // Found number in inventory
-        phoneNumber = inventoryResult.number.phoneNumber
-        inventoryId = inventoryResult.number.id
-        console.log(`Using ${inventoryResult.source} number from inventory: ${phoneNumber}`)
-      } else {
-        // 2. No inventory number - purchase new one from EZTexting
-        console.log(`No inventory number available for area code ${areaCode}, purchasing new number...`)
-
-        const provisionResult = await ezTexting.provisionPhoneNumber(areaCode)
-
-        if (!provisionResult.success) {
-          return NextResponse.json(
-            {
-              success: false,
-              error: provisionResult.error || 'Failed to provision phone number'
-            },
-            { status: 500 }
-          )
-        }
-
-        phoneNumber = provisionResult.phoneNumber!
-
-        // Add newly purchased number to inventory
-        const addResult = await addToInventory({
-          phoneNumber: provisionResult.phoneNumber!,
-          ezTextingNumberId: provisionResult.numberId!,
-          areaCode: provisionResult.areaCode!,
-        })
-
-        if (addResult.success) {
-          inventoryId = addResult.inventoryId
-          console.log(`New number ${phoneNumber} added to inventory`)
-        }
-      }
-    } else {
-      console.log('[Onboarding] Skipping phone provisioning due to promo code')
-    }
+    console.log('[Onboarding] Phone number will be manually assigned by admin after payment confirmation')
 
     // Create or update business customer record
     console.log('[Onboarding] Creating/updating business customer:', { businessName, contactEmail, phoneNumber })
