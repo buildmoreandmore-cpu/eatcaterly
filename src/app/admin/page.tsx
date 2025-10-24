@@ -50,6 +50,34 @@ interface BusinessActivity {
   createdAt: Date
 }
 
+async function getBusinessesNeedingPhoneNumbers() {
+  try {
+    const businesses = await prisma.businessCustomer.findMany({
+      where: {
+        assignedPhoneNumber: null,
+        subscriptionStatus: {
+          in: ['active', 'trial']
+        }
+      },
+      select: {
+        id: true,
+        businessName: true,
+        contactEmail: true,
+        subscriptionStatus: true,
+        subscriptionTier: true,
+        createdAt: true
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    })
+    return businesses
+  } catch (error) {
+    console.error('Failed to fetch businesses needing phone numbers:', error)
+    return []
+  }
+}
+
 async function getPlatformStats(): Promise<PlatformStats> {
   try {
     const now = new Date()
@@ -296,6 +324,7 @@ export default async function AdminDashboard() {
 
   const stats = await getPlatformStats()
   const recentActivity = await getRecentBusinessActivity()
+  const businessesNeedingPhones = await getBusinessesNeedingPhoneNumbers()
 
   const statsCards = [
     {
@@ -383,6 +412,46 @@ export default async function AdminDashboard() {
           </p>
         </div>
       </div>
+
+      {/* Phone Number Assignment Notification */}
+      {businessesNeedingPhones.length > 0 && (
+        <div className="bg-orange-50 border-l-4 border-orange-400 p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <AlertCircle className="h-5 w-5 text-orange-400" />
+            </div>
+            <div className="ml-3 flex-1">
+              <h3 className="text-sm font-medium text-orange-800">
+                {businessesNeedingPhones.length} {businessesNeedingPhones.length === 1 ? 'business needs' : 'businesses need'} phone number assignment
+              </h3>
+              <div className="mt-2 text-sm text-orange-700">
+                <p className="mb-2">The following businesses have completed payment but don't have assigned phone numbers:</p>
+                <ul className="list-disc list-inside space-y-1">
+                  {businessesNeedingPhones.slice(0, 3).map((business) => (
+                    <li key={business.id}>
+                      <strong>{business.businessName}</strong> ({business.contactEmail}) - {business.subscriptionStatus}
+                    </li>
+                  ))}
+                  {businessesNeedingPhones.length > 3 && (
+                    <li className="text-orange-600 font-medium">
+                      + {businessesNeedingPhones.length - 3} more...
+                    </li>
+                  )}
+                </ul>
+              </div>
+              <div className="mt-4">
+                <Link
+                  href="/admin/phone-inventory"
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+                >
+                  <Phone className="h-4 w-4 mr-2" />
+                  Assign Phone Numbers Now
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
