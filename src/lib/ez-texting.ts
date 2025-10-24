@@ -77,6 +77,8 @@ export async function sendSMS(params: SendSMSParams): Promise<SendSMSResult> {
     const formattedFrom = formatPhoneNumber(from)
 
     console.log('[EZTexting] Sending SMS:', { to: formattedTo, from: formattedFrom, messageLength: message.length })
+    console.log('[EZTexting] API URL:', EZ_TEXTING_API_URL)
+    console.log('[EZTexting] Has credentials:', { username: !!EZTEXTING_USERNAME, password: !!EZTEXTING_PASSWORD })
 
     // Build URL-encoded form data (EZTexting uses form data, not JSON)
     const formData = new URLSearchParams()
@@ -86,12 +88,21 @@ export async function sendSMS(params: SendSMSParams): Promise<SendSMSResult> {
     formData.append('Message', message)
     formData.append('Subject', formattedFrom) // Subject shows as sender on some carriers
 
-    const response = await fetch(`${EZ_TEXTING_API_URL}/sending/messages?format=json`, {
+    const apiUrl = `${EZ_TEXTING_API_URL}/sending/messages?format=json`
+    console.log('[EZTexting] Fetching:', apiUrl)
+
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: formData.toString(),
+    })
+
+    console.log('[EZTexting] Response received:', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok
     })
 
     if (!response.ok) {
