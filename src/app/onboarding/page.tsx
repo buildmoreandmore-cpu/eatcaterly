@@ -251,7 +251,7 @@ export default function OnboardingPage() {
                     Your business profile has been created successfully!
                   </p>
                   <p className="text-sm text-gray-600">
-                    A dedicated phone number will be assigned to you after completing your subscription.
+                    A dedicated local phone number will be assigned to your business shortly after payment is confirmed.
                   </p>
                 </div>
               </div>
@@ -318,7 +318,7 @@ export default function OnboardingPage() {
               Complete Your Business Profile
             </h1>
             <p className="text-gray-600">
-              Tell us about your business and we'll assign you a local A2P-compliant phone number
+              Tell us about your business to get started with EatCaterly
             </p>
           </div>
 
@@ -392,7 +392,7 @@ export default function OnboardingPage() {
                 required
               />
               <p className="text-xs text-gray-500 mt-1">
-                We'll assign you a local phone number for your area
+                We use your zip code to provide area-appropriate services
               </p>
             </div>
 
@@ -468,14 +468,14 @@ export default function OnboardingPage() {
               disabled={isLoading || !formData.businessName || !formData.zipCode}
               className="w-full bg-blue-600 text-white py-4 px-6 rounded-lg font-semibold text-lg hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
             >
-              {isLoading ? 'Assigning your number...' : 'Continue'}
+              {isLoading ? 'Creating your profile...' : 'Continue'}
             </button>
           </form>
 
           {/* Info Box */}
           <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
             <p className="text-sm text-blue-800">
-              <strong>What's next?</strong> We'll assign you a local phone number from your area code and set up your A2P-compliant messaging service.
+              <strong>What's next?</strong> After completing your subscription, a dedicated local phone number will be assigned to your business for SMS ordering.
             </p>
           </div>
         </div>
