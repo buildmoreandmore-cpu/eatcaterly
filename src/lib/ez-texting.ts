@@ -148,10 +148,21 @@ export async function sendSMS(params: SendSMSParams): Promise<SendSMSResult> {
       messageId: data.Response?.Entry?.MessageID || data.Entry?.MessageID || 'unknown',
     }
   } catch (error: any) {
-    console.error('[EZTexting] Exception while sending SMS:', error)
+    console.error('[EZTexting] Exception while sending SMS:', {
+      message: error.message,
+      cause: error.cause,
+      stack: error.stack,
+      name: error.name,
+      code: error.code,
+      type: error.constructor?.name
+    })
+
+    // Log the full error object for debugging
+    console.error('[EZTexting] Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error)))
+
     return {
       success: false,
-      error: error.message || 'Network error while sending SMS',
+      error: `${error.name || 'Error'}: ${error.message || 'Network error while sending SMS'}`,
     }
   }
 }
