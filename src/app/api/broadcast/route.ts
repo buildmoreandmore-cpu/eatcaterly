@@ -136,11 +136,12 @@ export async function POST(request: NextRequest) {
     const results = await Promise.allSettled(
       customers.map(async (customer) => {
         try {
-          // Send SMS via EZTexting
+          // Send SMS via EZTexting with PhoneID
           const smsResult = await sendSMS({
             to: customer.phoneNumber,
             from: businessCustomer.assignedPhoneNumber!,
-            message: message
+            message: message,
+            phoneId: businessCustomer.ezTextingNumberId || undefined
           })
 
           // Log the SMS

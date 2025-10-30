@@ -26,14 +26,28 @@ function getAuthHeader(): string {
 
 interface SendSMSParams {
   to: string
-  from: string
+  from: string // Phone number for display/logging
   message: string
+  phoneId?: string // EZTexting PhoneID for sending from specific number
 }
 
 interface SendSMSResult {
   success: boolean
   messageId?: string
   error?: string
+}
+
+interface EZTextingPhone {
+  PhoneID: string
+  Number: string
+  Type: string // e.g., "Local", "TollFree"
+}
+
+interface EZTextingPhoneResponse {
+  Response: {
+    Status: string
+    Entries: EZTextingPhone[]
+  }
 }
 
 /**
@@ -43,7 +57,7 @@ interface SendSMSResult {
  * Phone numbers must be manually acquired through the EZ Texting dashboard.
  */
 export async function sendSMS(params: SendSMSParams): Promise<SendSMSResult> {
-  const { to, from, message } = params
+  const { to, from, message, phoneId } = params
 
   // Validate credentials exist
   if (!EZTEXTING_USERNAME || !EZTEXTING_PASSWORD) {
@@ -87,10 +101,16 @@ export async function sendSMS(params: SendSMSParams): Promise<SendSMSResult> {
     formData.append('PhoneNumbers[]', formattedTo)
     formData.append('Message', message)
 
-    // EZTexting REST API: The FROM number is selected in account settings
-    // or via PhoneID if you have multiple numbers
-    // For now, include as Subject for tracking purposes
-    formData.append('Subject', `From: ${formattedFrom}`)
+    // If PhoneID is provided, use it to send from specific number
+    if (phoneId) {
+      console.log('[EZTexting] Using PhoneID:', phoneId)
+      formData.append('PhoneID', phoneId)
+    } else {
+      console.log('[EZTexting] No PhoneID provided, using account default number')
+    }
+
+    // Subject for tracking/display purposes
+    formData.append('Subject', 'Menu Broadcast')
 
     const apiUrl = `${EZ_TEXTING_API_URL}/sending/messages?format=json`
     console.log('[EZTexting] Fetching:', apiUrl)
@@ -171,6 +191,72 @@ export async function sendSMS(params: SendSMSParams): Promise<SendSMSResult> {
   }
 }
 
+/**
+ * Fetch all phone numbers from EZTexting account
+ * This retrieves the PhoneIDs needed for sending from specific numbers
+ */
+export async function fetchPhoneNumbers(): Promise<{ success: boolean; phones?: EZTextingPhone[]; error?: string }> {
+  // Validate credentials exist
+  if (!EZTEXTING_USERNAME || !EZTEXTING_PASSWORD) {
+    return {
+      success: false,
+      error: 'EZTexting credentials not configured',
+    }
+  }
+
+  try {
+    const apiUrl = `${EZ_TEXTING_API_URL}/sending/phoneNumbers?format=json`
+    console.log('[EZTexting] Fetching phone numbers from:', apiUrl)
+
+    const formData = new URLSearchParams()
+    formData.append('User', EZTEXTING_USERNAME)
+    formData.append('Password', EZTEXTING_PASSWORD)
+
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: formData.toString(),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('[EZTexting] Failed to fetch phone numbers:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorText,
+      })
+
+      return {
+        success: false,
+        error: `Failed to fetch phone numbers: ${response.status} ${response.statusText}`,
+      }
+    }
+
+    const data: EZTextingPhoneResponse = await response.json()
+    console.log('[EZTexting] Phone numbers fetched successfully:', data)
+
+    if (data.Response?.Status === 'Success' && data.Response?.Entries) {
+      return {
+        success: true,
+        phones: data.Response.Entries,
+      }
+    }
+
+    return {
+      success: false,
+      error: 'No phone numbers found in response',
+    }
+  } catch (error: any) {
+    console.error('[EZTexting] Exception while fetching phone numbers:', error)
+    return {
+      success: false,
+      error: `Error: ${error.message || 'Network error'}`,
+    }
+  }
+}
+
 // EZ Texting only supports SMS sending via API
 // Phone number management must be done manually through their dashboard
-export default { sendSMS }
+export default { sendSMS, fetchPhoneNumbers }
