@@ -87,12 +87,10 @@ export async function sendSMS(params: SendSMSParams): Promise<SendSMSResult> {
     formData.append('PhoneNumbers[]', formattedTo)
     formData.append('Message', message)
 
-    // Set the FROM phone number (the business's assigned number)
-    // EZTexting uses 'From' parameter to specify which number to send from
-    formData.append('From', formattedFrom)
-
-    // Subject is optional metadata, can include business name
-    formData.append('Subject', 'Menu Broadcast')
+    // EZTexting REST API: The FROM number is selected in account settings
+    // or via PhoneID if you have multiple numbers
+    // For now, include as Subject for tracking purposes
+    formData.append('Subject', `From: ${formattedFrom}`)
 
     const apiUrl = `${EZ_TEXTING_API_URL}/sending/messages?format=json`
     console.log('[EZTexting] Fetching:', apiUrl)
