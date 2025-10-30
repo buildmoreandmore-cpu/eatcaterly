@@ -16,13 +16,21 @@ export const isDemoMode = () => {
   return true
 }
 
-// Separate demo mode check for SMS (always true for A2P registration requirements)
+// Separate demo mode check for SMS with auto-detection of credentials
 export const isSMSDemoMode = () => {
+  // Allow tests to bypass demo mode
   if (process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID) {
     return false
   }
-  // Force SMS demo mode due to A2P registration requirements
-  return true
+
+  // Auto-detect based on EZtexting credentials
+  const hasBasicAuth = process.env.EZTEXTING_USERNAME && process.env.EZTEXTING_PASSWORD
+  const hasApiAuth = process.env.EZTEXTING_APP_KEY && process.env.EZTEXTING_APP_SECRET
+  const hasOAuthTokens = process.env.EZTEXTING_ACCESS_TOKEN && process.env.EZTEXTING_REFRESH_TOKEN
+
+  // If any credential set is present, disable demo mode (use real SMS)
+  // If no credentials present, enable demo mode (safe fallback)
+  return !(hasBasicAuth || hasApiAuth || hasOAuthTokens)
 }
 
 export const demoSMSResult = {

@@ -1,5 +1,5 @@
 import { prisma } from './db'
-import { isDemoMode, demoSMSResult } from './demo-mode'
+import { isSMSDemoMode, demoSMSResult } from './demo-mode'
 import { ezTextingAuth } from './eztexting-auth'
 
 function getEZTextingConfig() {
@@ -9,18 +9,65 @@ function getEZTextingConfig() {
 }
 
 async function sendViaEZTexting(to: string, message: string): Promise<SMSResult> {
-  const config = getEZTextingConfig()
+  // Clean phone number (remove +1)
+  const cleanNumber = to.replace(/^\+1/, '').replace(/\D/g, '')
 
-  // Get EZ Texting credentials for Basic Auth (REST API)
+  // Check if we have OAuth tokens
+  const hasOAuthTokens = process.env.EZTEXTING_ACCESS_TOKEN && process.env.EZTEXTING_REFRESH_TOKEN
+
+  if (hasOAuthTokens) {
+    // Use OAuth API (newer method with bearer token)
+    try {
+      const accessToken = await ezTextingAuth.getValidAccessToken()
+
+      const response = await fetch('https://a.eztexting.com/v1/messaging', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({
+          phoneNumbers: [cleanNumber],
+          message: message
+        })
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('EZ Texting OAuth API error:', {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText,
+          to: cleanNumber,
+          messageLength: message.length
+        })
+        throw new Error(`EZ Texting OAuth API error: ${response.status} - ${errorText}`)
+      }
+
+      const result = await response.json()
+      console.log('SMS sent successfully via EZ Texting OAuth:', {
+        to: cleanNumber,
+        response: result
+      })
+
+      return {
+        sid: String(result.id || `ez_oauth_${Date.now()}`),
+        status: 'sent'
+      }
+    } catch (error) {
+      console.error('OAuth API failed, falling back to Basic Auth:', error)
+      // Fall through to Basic Auth
+    }
+  }
+
+  // Fallback to Basic Auth (REST API) if OAuth not available or failed
+  const config = getEZTextingConfig()
   const username = process.env.EZTEXTING_USERNAME || process.env.EZTEXTING_APP_KEY
   const password = process.env.EZTEXTING_PASSWORD || process.env.EZTEXTING_APP_SECRET
 
   if (!username || !password) {
-    throw new Error('EZ Texting credentials not configured')
+    throw new Error('EZ Texting credentials not configured (need either OAuth tokens or username/password)')
   }
-
-  // Clean phone number (remove +1)
-  const cleanNumber = to.replace(/^\+1/, '').replace(/\D/g, '')
 
   // Use form data for REST API
   const formData = new URLSearchParams()
@@ -40,6 +87,13 @@ async function sendViaEZTexting(to: string, message: string): Promise<SMSResult>
 
   if (!response.ok) {
     const errorText = await response.text()
+    console.error('EZ Texting API error:', {
+      status: response.status,
+      statusText: response.statusText,
+      body: errorText,
+      to: cleanNumber,
+      messageLength: message.length
+    })
     throw new Error(`EZ Texting API error: ${response.status} - ${errorText}`)
   }
 
@@ -47,11 +101,16 @@ async function sendViaEZTexting(to: string, message: string): Promise<SMSResult>
 
   // EZ Texting API response structure
   if (result.Response && result.Response.Status === 'Success') {
+    console.log('SMS sent successfully via EZ Texting:', {
+      to: cleanNumber,
+      messageId: result.Response.Entry?.ID
+    })
     return {
       sid: String(result.Response.Entry?.ID || `ez_${Date.now()}`),
       status: 'sent'
     }
   } else {
+    console.error('EZ Texting API returned error:', result)
     throw new Error(`EZ Texting API error: ${JSON.stringify(result)}`)
   }
 }
@@ -78,12 +137,7 @@ export async function sendSMS(
   customerId?: string
 ): Promise<SMSResult> {
   try {
-    // Check if EZ Texting is properly configured
-    const appKey = process.env.EZTEXTING_APP_KEY
-    const appSecret = process.env.EZTEXTING_APP_SECRET
-    const useEZTexting = appKey && appSecret
-
-    if (isDemoMode() || !useEZTexting) {
+    if (isSMSDemoMode()) {
       console.log('Demo mode: SMS would be sent to', to, 'with message:', message)
 
       // Try to log demo SMS to database (with error handling)
@@ -404,7 +458,7 @@ async function sendTodaysMenu(): Promise<string> {
  */
 export async function broadcastMenu(): Promise<BroadcastResult> {
   try {
-    if (isDemoMode()) {
+    if (isSMSDemoMode()) {
       console.log('Demo mode: Broadcasting menu to demo customers')
       return {
         sent: 5,
@@ -483,6 +537,8 @@ export async function broadcastMenu(): Promise<BroadcastResult> {
 
     const message = `🍽️ ${menu.title || "Today's Menu"}\\n\\n${menuText}\\n\\nReply with item numbers to order!\\nExample: "Item 1 and Item 3"`
 
+    console.log(`Broadcasting menu to ${customers.length} customers`)
+
     // Send to all customers
     const results = await Promise.allSettled(
       customers.map(customer =>
@@ -495,6 +551,11 @@ export async function broadcastMenu(): Promise<BroadcastResult> {
     const errors = results
       .filter(r => r.status === 'rejected')
       .map(r => (r as PromiseRejectedResult).reason.message)
+
+    console.log(`Broadcast complete: ${sent} sent, ${failed} failed`)
+    if (failed > 0) {
+      console.error('Broadcast errors:', errors)
+    }
 
     return {
       sent,
