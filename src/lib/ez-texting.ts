@@ -101,13 +101,17 @@ export async function sendSMS(params: SendSMSParams): Promise<SendSMSResult> {
     formData.append('PhoneNumbers[]', formattedTo)
     formData.append('Message', message)
 
-    // If PhoneID is provided, use it to send from specific number
-    if (phoneId) {
-      console.log('[EZTexting] Using PhoneID:', phoneId)
-      formData.append('PhoneID', phoneId)
-    } else {
-      console.log('[EZTexting] No PhoneID provided, using account default number')
+    // REQUIRE PhoneID - do not allow fallback to default number
+    if (!phoneId) {
+      console.error('[EZTexting] No PhoneID provided - broadcast rejected')
+      return {
+        success: false,
+        error: 'PhoneID is required for sending SMS. Business must have ezTextingNumberId configured.',
+      }
     }
+
+    console.log('[EZTexting] Using PhoneID:', phoneId)
+    formData.append('PhoneID', phoneId)
 
     // Subject for tracking/display purposes
     formData.append('Subject', 'Menu Broadcast')

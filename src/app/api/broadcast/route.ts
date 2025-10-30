@@ -36,10 +36,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if business has phone number
+    // Check if business has phone number and PhoneID
     if (!businessCustomer.assignedPhoneNumber) {
       return NextResponse.json(
         { success: false, error: 'No phone number assigned to your business. Please contact support.' },
+        { status: 400 }
+      )
+    }
+
+    // REQUIRE PhoneID - do not allow fallback to default number
+    if (!businessCustomer.ezTextingNumberId) {
+      return NextResponse.json(
+        { success: false, error: 'Your phone number is not configured for SMS sending. Please contact support to complete setup.' },
         { status: 400 }
       )
     }
