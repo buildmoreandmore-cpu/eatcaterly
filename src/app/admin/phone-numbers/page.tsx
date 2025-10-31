@@ -29,6 +29,9 @@ export default function PhoneNumberManagementPage() {
   const [success, setSuccess] = useState<string | null>(null)
   const [selectedBusiness, setSelectedBusiness] = useState<string>('')
   const [selectedPhone, setSelectedPhone] = useState<string>('')
+  const [manualPhoneNumber, setManualPhoneNumber] = useState<string>('')
+  const [manualPhoneId, setManualPhoneId] = useState<string>('')
+  const [updatingPhoneId, setUpdatingPhoneId] = useState(false)
 
   useEffect(() => {
     loadData()
@@ -198,9 +201,70 @@ export default function PhoneNumberManagementPage() {
               )}
             </button>
           </div>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-600 mb-4">
             Fetch all phone numbers and PhoneIDs from your EZTexting account
           </p>
+
+          {/* Manual PhoneID Entry */}
+          <div className="mt-4 pt-4 border-t">
+            <h3 className="font-semibold mb-3 text-gray-700">Or Manually Enter PhoneID</h3>
+            <p className="text-sm text-gray-600 mb-3">
+              If automatic sync fails, manually enter the PhoneID from EZTexting dashboard
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <input
+                type="text"
+                placeholder="Phone Number (e.g., +14702562470)"
+                value={manualPhoneNumber}
+                onChange={(e) => setManualPhoneNumber(e.target.value)}
+                className="border border-gray-300 rounded-lg p-2 text-sm"
+              />
+              <input
+                type="text"
+                placeholder="PhoneID from EZTexting"
+                value={manualPhoneId}
+                onChange={(e) => setManualPhoneId(e.target.value)}
+                className="border border-gray-300 rounded-lg p-2 text-sm"
+              />
+            </div>
+            <button
+              onClick={async () => {
+                if (!manualPhoneNumber || !manualPhoneId) {
+                  setError('Both phone number and PhoneID are required')
+                  return
+                }
+                try {
+                  setUpdatingPhoneId(true)
+                  setError(null)
+                  const response = await fetch('/api/admin/update-phone-id', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      phoneNumber: manualPhoneNumber,
+                      ezTextingNumberId: manualPhoneId
+                    })
+                  })
+                  const data = await response.json()
+                  if (response.ok) {
+                    setSuccess(data.message)
+                    setManualPhoneNumber('')
+                    setManualPhoneId('')
+                    await loadData()
+                  } else {
+                    setError(data.error)
+                  }
+                } catch (err) {
+                  setError('Failed to update PhoneID')
+                } finally {
+                  setUpdatingPhoneId(false)
+                }
+              }}
+              disabled={updatingPhoneId}
+              className="mt-2 w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 text-sm"
+            >
+              {updatingPhoneId ? 'Updating...' : 'Save PhoneID'}
+            </button>
+          </div>
         </div>
 
         {/* Phone Numbers List */}
