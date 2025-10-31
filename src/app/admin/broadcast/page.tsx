@@ -40,7 +40,7 @@ export default function BroadcastMenuPage() {
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
-  const [broadcastResult, setBroadcastResult] = useState<{sent: number, failed: number, total: number} | null>(null)
+  const [broadcastResult, setBroadcastResult] = useState<{sent: number, failed: number, total: number, errorDetails?: string, debugInfo?: any} | null>(null)
 
   useEffect(() => {
     loadData()
@@ -191,7 +191,19 @@ export default function BroadcastMenuPage() {
               Your menu has been sent to {broadcastResult.sent} customer{broadcastResult.sent !== 1 ? 's' : ''} via SMS.
               {broadcastResult.failed > 0 && <><br/><span className="text-orange-600">{broadcastResult.failed} message{broadcastResult.failed !== 1 ? 's' : ''} failed to send.</span></>}
             </p>
-            <p className="text-sm text-gray-500">
+            {broadcastResult.errorDetails && (
+              <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg text-left">
+                <p className="font-semibold text-red-800 mb-2">Error Details:</p>
+                <p className="text-sm text-red-700 font-mono">{broadcastResult.errorDetails}</p>
+                {broadcastResult.debugInfo && (
+                  <div className="mt-2 text-xs text-red-600">
+                    <p>Business Phone: {broadcastResult.debugInfo.businessPhone}</p>
+                    <p>PhoneID: {broadcastResult.debugInfo.phoneId || 'NOT SET'}</p>
+                  </div>
+                )}
+              </div>
+            )}
+            <p className="text-sm text-gray-500 mt-4">
               Redirecting to dashboard...
             </p>
           </div>

@@ -144,12 +144,23 @@ export async function POST(request: NextRequest) {
     const results = await Promise.allSettled(
       customers.map(async (customer) => {
         try {
+          console.log('[Broadcast] Attempting SMS to:', customer.phoneNumber, {
+            from: businessCustomer.assignedPhoneNumber,
+            phoneId: businessCustomer.ezTextingNumberId
+          })
+
           // Send SMS via EZTexting with PhoneID
           const smsResult = await sendSMS({
             to: customer.phoneNumber,
             from: businessCustomer.assignedPhoneNumber!,
             message: message,
             phoneId: businessCustomer.ezTextingNumberId || undefined
+          })
+
+          console.log('[Broadcast] SMS result:', {
+            success: smsResult.success,
+            error: smsResult.error,
+            messageId: smsResult.messageId
           })
 
           // Log the SMS
@@ -167,7 +178,8 @@ export async function POST(request: NextRequest) {
             customerId: customer.id,
             phoneNumber: customer.phoneNumber,
             success: smsResult.success,
-            error: smsResult.error
+            error: smsResult.error,
+            details: smsResult // Include full result for debugging
           }
         } catch (error: any) {
           console.error(`[Broadcast] Failed to send to ${customer.phoneNumber}:`, error)
@@ -187,7 +199,8 @@ export async function POST(request: NextRequest) {
             customerId: customer.id,
             phoneNumber: customer.phoneNumber,
             success: false,
-            error: error?.message || 'Failed to send SMS'
+            error: error?.message || 'Failed to send SMS',
+            details: error
           }
         }
       })
@@ -197,14 +210,23 @@ export async function POST(request: NextRequest) {
     const sent = results.filter(r => r.status === 'fulfilled' && r.value.success).length
     const failed = results.length - sent
 
-    console.log('[Broadcast] Results:', { sent, failed, total: results.length })
+    // Get first error for debugging
+    const firstError = results.find(r => r.status === 'fulfilled' && !r.value.success)
+    const errorDetails = firstError?.status === 'fulfilled' ? firstError.value.error : null
+
+    console.log('[Broadcast] Results:', { sent, failed, total: results.length, firstError: errorDetails })
 
     return NextResponse.json({
       success: true,
       sent,
       failed,
       total: results.length,
-      message: `Successfully sent menu to ${sent} customer${sent !== 1 ? 's' : ''}${failed > 0 ? `. ${failed} failed.` : ''}`
+      message: `Successfully sent menu to ${sent} customer${sent !== 1 ? 's' : ''}${failed > 0 ? `. ${failed} failed.` : ''}`,
+      errorDetails: failed > 0 ? errorDetails : null, // Include error for debugging
+      debugInfo: {
+        businessPhone: businessCustomer.assignedPhoneNumber,
+        phoneId: businessCustomer.ezTextingNumberId
+      }
     })
 
   } catch (error: any) {
