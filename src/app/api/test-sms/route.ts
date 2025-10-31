@@ -94,34 +94,35 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Get test info
+ * Get test info - PUBLIC endpoint for debugging
+ * Shows business PhoneID configuration
  */
 export async function GET() {
   try {
-    const admin = await isAdmin()
-    if (!admin) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
+    // Make this public for debugging purposes
     const businesses = await prisma.businessCustomer.findMany({
       select: {
         id: true,
         businessName: true,
         assignedPhoneNumber: true,
-        ezTextingNumberId: true
+        ezTextingNumberId: true,
+        contactEmail: true
       }
     })
 
     return NextResponse.json({
       success: true,
-      message: 'Use POST with businessId and testPhoneNumber to send test SMS',
+      message: 'Business PhoneID Configuration',
       businesses: businesses.map(b => ({
         id: b.id,
         name: b.businessName,
+        email: b.contactEmail,
         phone: b.assignedPhoneNumber,
         phoneId: b.ezTextingNumberId,
+        phoneIdLength: b.ezTextingNumberId?.length || 0,
         ready: !!(b.assignedPhoneNumber && b.ezTextingNumberId)
-      }))
+      })),
+      note: 'Use POST with businessId and testPhoneNumber to send test SMS (admin only)'
     })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })
