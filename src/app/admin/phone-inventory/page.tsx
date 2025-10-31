@@ -145,10 +145,20 @@ export default function PhoneNumberManagementPage() {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Phone Number Management</h1>
-          <p className="text-gray-600">
-            Sync phone numbers from EZTexting and assign PhoneIDs to businesses
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">Phone Number Management</h1>
+              <p className="text-gray-600">
+                Sync phone numbers from EZTexting and assign PhoneIDs to businesses
+              </p>
+            </div>
+            <a
+              href="/admin/debug-sms"
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+            >
+              View SMS Debug Dashboard
+            </a>
+          </div>
         </div>
 
         {/* Success/Error Messages */}
