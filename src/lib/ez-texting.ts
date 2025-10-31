@@ -209,19 +209,20 @@ export async function fetchPhoneNumbers(): Promise<{ success: boolean; phones?: 
   }
 
   try {
-    const apiUrl = `${EZ_TEXTING_API_URL}/sending/phoneNumbers?format=json`
-    console.log('[EZTexting] Fetching phone numbers from:', apiUrl)
+    // EZTexting API uses GET with credentials in URL params
+    const params = new URLSearchParams()
+    params.append('User', EZTEXTING_USERNAME)
+    params.append('Password', EZTEXTING_PASSWORD)
+    params.append('format', 'json')
 
-    const formData = new URLSearchParams()
-    formData.append('User', EZTEXTING_USERNAME)
-    formData.append('Password', EZTEXTING_PASSWORD)
+    const apiUrl = `${EZ_TEXTING_API_URL}/sending/phoneNumbers?${params.toString()}`
+    console.log('[EZTexting] Fetching phone numbers from:', EZ_TEXTING_API_URL + '/sending/phoneNumbers')
 
     const response = await fetch(apiUrl, {
-      method: 'POST',
+      method: 'GET',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'Accept': 'application/json',
       },
-      body: formData.toString(),
     })
 
     if (!response.ok) {
