@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getLocationForZipCode, getAreaCodeForZipCode } from '@/lib/phone-number-assignment'
 import { getAvailableNumber, assignNumber, addToInventory } from '@/lib/phone-inventory'
-import ezTexting from '@/lib/ez-texting'
 
 export async function POST(request: NextRequest) {
   console.log('[Onboarding] POST handler called')

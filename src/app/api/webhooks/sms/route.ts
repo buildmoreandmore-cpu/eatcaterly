@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { processSMSResponse, sendSMS } from '@/lib/sms'
+import twilio from 'twilio'
 
 export async function POST(request: NextRequest) {
   try {
@@ -8,39 +9,48 @@ export async function POST(request: NextRequest) {
     let body: string = ''
     let messageId: string = ''
 
-    // Handle EZ Texting webhook format
-    if (contentType.includes('application/json')) {
-      // EZ Texting format (JSON)
+    // Handle Twilio webhook format (application/x-www-form-urlencoded)
+    if (contentType.includes('application/x-www-form-urlencoded')) {
+      // Twilio sends form data
+      const formData = await request.formData()
+
+      // Twilio webhook parameters
+      from = formData.get('From') as string
+      body = formData.get('Body') as string
+      messageId = formData.get('MessageSid') as string
+      const to = formData.get('To') as string
+
+      console.log('Received Twilio SMS:', { from, to, body, messageId })
+
+      // Optional: Validate Twilio signature for security
+      // const signature = request.headers.get('x-twilio-signature')
+      // const url = request.url
+      // const authToken = process.env.TWILIO_AUTH_TOKEN
+      // if (authToken && signature) {
+      //   const params = Object.fromEntries(formData)
+      //   const isValid = twilio.validateRequest(authToken, signature, url, params)
+      //   if (!isValid) {
+      //     console.error('Invalid Twilio signature')
+      //     return NextResponse.json({ error: 'Invalid signature' }, { status: 403 })
+      //   }
+      // }
+    } else if (contentType.includes('application/json')) {
+      // Handle JSON format for testing
       const jsonData = await request.json()
-      from = jsonData.PhoneNumber || jsonData.From || jsonData.phone
-      body = jsonData.Message || jsonData.Body || jsonData.message
-      messageId = jsonData.MessageID || jsonData.MessageId || jsonData.id
+      from = jsonData.From || jsonData.from
+      body = jsonData.Body || jsonData.body
+      messageId = jsonData.MessageSid || jsonData.messageSid
 
-      // Ensure phone number has proper format
-      if (from && !from.startsWith('+')) {
-        from = '+1' + from.replace(/\D/g, '') // Add +1 and remove non-digits
-      }
-
-      console.log('Received EZ Texting SMS:', { from, body, messageId })
+      console.log('Received JSON SMS (testing):', { from, body, messageId })
     } else {
-      // Try to parse as form data for backwards compatibility
-      try {
-        const formData = await request.formData()
-        from = formData.get('PhoneNumber') as string || formData.get('From') as string
-        body = formData.get('Message') as string || formData.get('Body') as string
-        messageId = formData.get('MessageID') as string || formData.get('MessageSid') as string
+      const text = await request.text()
+      console.log('Unknown webhook format:', text)
+      return NextResponse.json({ error: 'Unsupported content type' }, { status: 400 })
+    }
 
-        // Ensure phone number has proper format
-        if (from && !from.startsWith('+')) {
-          from = '+1' + from.replace(/\D/g, '')
-        }
-
-        console.log('Received form data SMS:', { from, body, messageId })
-      } catch {
-        const text = await request.text()
-        console.log('Unknown webhook format:', text)
-        return NextResponse.json({ error: 'Unsupported content type' }, { status: 400 })
-      }
+    // Ensure phone number has proper format
+    if (from && !from.startsWith('+')) {
+      from = '+1' + from.replace(/\D/g, '')
     }
 
     console.log('Processed SMS data:', { from, body, messageId })
@@ -52,7 +62,7 @@ export async function POST(request: NextRequest) {
     // Process the SMS and get response
     const responseMessage = await processSMSResponse(from, body)
 
-    // Send response back via EZ Texting (only if we have a response)
+    // Send response back via Twilio (only if we have a response)
     if (responseMessage) {
       try {
         await sendSMS(from, responseMessage)
@@ -62,12 +72,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Return JSON response for EZ Texting
-    return NextResponse.json({
-      success: true,
-      message: 'SMS processed successfully',
-      response: responseMessage
-    })
+    // Return TwiML response (Twilio's preferred format)
+    // You can also return JSON, but TwiML is more standard
+    return new NextResponse(
+      `<?xml version="1.0" encoding="UTF-8"?>
+<Response></Response>`,
+      {
+        status: 200,
+        headers: { 'Content-Type': 'text/xml' }
+      }
+    )
   } catch (error) {
     console.error('SMS webhook error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

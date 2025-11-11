@@ -32,11 +32,10 @@ const envSchema = z.object({
   STRIPE_PRICE_ID_STARTER: z.string().optional(),
   STRIPE_PRICE_ID_PRO: z.string().optional(),
 
-  // EZTexting SMS (Required)
-  EZTEXTING_USERNAME: z.string().min(1, 'EZTEXTING_USERNAME is required'),
-  EZTEXTING_PASSWORD: z.string().min(1, 'EZTEXTING_PASSWORD is required'),
-  EZ_TEXTING_API_KEY: z.string().min(1, 'EZ_TEXTING_API_KEY is required'),
-  EZ_TEXTING_API_URL: z.string().url().default('https://api.eztexting.com/v2'),
+  // Twilio SMS (Required)
+  TWILIO_ACCOUNT_SID: z.string().min(1, 'TWILIO_ACCOUNT_SID is required'),
+  TWILIO_AUTH_TOKEN: z.string().min(1, 'TWILIO_AUTH_TOKEN is required'),
+  TWILIO_PHONE_NUMBER: z.string().min(1, 'TWILIO_PHONE_NUMBER is required'),
 
   // App URLs
   NEXT_PUBLIC_APP_URL: z.string().url('NEXT_PUBLIC_APP_URL must be a valid URL'),

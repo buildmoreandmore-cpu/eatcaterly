@@ -4,7 +4,6 @@
  */
 
 import { prisma } from './db'
-import ezTexting from './ez-texting'
 
 const COOLDOWN_DAYS = 30 // Days before number can be reassigned
 
@@ -206,77 +205,41 @@ export async function addToInventory(params: {
 }
 
 /**
- * Sync all numbers from EZTexting to inventory
+ * Sync all numbers from Twilio to inventory
+ * Note: This function is kept for compatibility but Twilio phone number
+ * management is typically done manually or through the Twilio console.
+ * You can extend this to use the Twilio API if needed.
  */
-export async function syncWithEZTexting(): Promise<{
+export async function syncWithTwilio(): Promise<{
   success: boolean
   added: number
   updated: number
   error?: string
 }> {
   try {
-    const result = await ezTexting.listPhoneNumbers()
-
-    if (!result.success || !result.numbers) {
-      return {
-        success: false,
-        added: 0,
-        updated: 0,
-        error: result.error || 'Failed to fetch numbers from EZTexting',
-      }
-    }
-
-    let added = 0
-    let updated = 0
-
-    for (const number of result.numbers) {
-      // Check if number already exists in inventory
-      const existing = await prisma.phoneNumberInventory.findUnique({
-        where: { phoneNumber: number.phoneNumber },
-      })
-
-      if (existing) {
-        // Update existing record
-        await prisma.phoneNumberInventory.update({
-          where: { id: existing.id },
-          data: {
-            ezTextingNumberId: number.numberId,
-            monthlyPrice: number.monthlyPrice,
-          },
-        })
-        updated++
-      } else {
-        // Add new number to inventory
-        await prisma.phoneNumberInventory.create({
-          data: {
-            phoneNumber: number.phoneNumber,
-            ezTextingNumberId: number.numberId,
-            areaCode: number.areaCode,
-            monthlyPrice: number.monthlyPrice,
-            status: 'AVAILABLE',
-            source: 'eztexting',
-            purchasedAt: new Date(),
-          },
-        })
-        added++
-      }
-    }
+    // Twilio phone number management is typically done through the console
+    // This function is a placeholder for future automation
+    console.log('Twilio phone number sync is not yet implemented.')
+    console.log('Please manage phone numbers through the Twilio console.')
 
     return {
       success: true,
-      added,
-      updated,
+      added: 0,
+      updated: 0,
     }
   } catch (error: any) {
-    console.error('Error syncing with EZTexting:', error)
+    console.error('Error syncing with Twilio:', error)
     return {
       success: false,
       added: 0,
       updated: 0,
-      error: error.message || 'Failed to sync with EZTexting',
+      error: error.message || 'Failed to sync with Twilio',
     }
   }
 }
+
+// Keep old function name for backward compatibility
+export const syncWithEZTexting = syncWithTwilio
 
 /**
  * Get inventory statistics

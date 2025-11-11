@@ -69,8 +69,8 @@ model BusinessCustomer {
   stripeCustomerId     String? @unique // Stripe customer ID for their subscription
   stripeSubscriptionId String? @unique // Stripe subscription ID
 
-  // EZ Texting phone number fields
-  ezTextingNumberId   String?   @unique // EZ Texting number ID
+  // SMS Provider phone number fields
+  providerNumberId    String?   @unique // Twilio or other SMS provider number ID
   numberProvisionedAt DateTime? // When the phone number was provisioned
 
   // Promo code fields
@@ -96,7 +96,7 @@ model BusinessCustomer {
 model PhoneNumberInventory {
   id              String    @id @default(cuid())
   phoneNumber     String    @unique // E.164 format (e.g., +14045551234)
-  ezTextingNumberId String? @unique // EZ Texting number ID for API operations
+  providerNumberId String? @unique // SMS provider number ID for API operations (Twilio SID, etc.)
   areaCode        String // Area code (e.g., "404", "770")
   status          PhoneNumberStatus @default(AVAILABLE) // Current status
 
@@ -108,8 +108,8 @@ model PhoneNumberInventory {
 
   // Purchase tracking
   purchasedAt     DateTime  @default(now()) // When we acquired this number
-  monthlyPrice    Float?    // Monthly cost from EZTexting
-  source          String    @default("eztexting") // Where we got it from
+  monthlyPrice    Float?    // Monthly cost from SMS provider
+  source          String    @default("twilio") // Where we got it from
 
   // Metadata
   notes           String? // Admin notes

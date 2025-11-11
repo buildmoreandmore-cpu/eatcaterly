@@ -26,6 +26,7 @@ export default function MenuManagementPage() {
   const [loading, setLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingMenu, setEditingMenu] = useState<Menu | null>(null)
+  const [isDemoMode, setIsDemoMode] = useState(false)
 
   // Form state
   const [title, setTitle] = useState('')
@@ -42,9 +43,10 @@ export default function MenuManagementPage() {
   useEffect(() => {
     // Check if in demo mode
     const urlParams = new URLSearchParams(window.location.search)
-    const isDemoMode = urlParams.get('demo') === 'true' || localStorage.getItem('authMode') === 'demo'
+    const demoMode = urlParams.get('demo') === 'true' || localStorage.getItem('authMode') === 'demo'
+    setIsDemoMode(demoMode)
 
-    if (isDemoMode) {
+    if (demoMode) {
       loadDemoMenus()
     } else {
       loadMenus()
