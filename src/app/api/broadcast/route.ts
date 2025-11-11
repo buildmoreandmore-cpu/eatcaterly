@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db'
-import { sendSMS } from '@/lib/ez-texting'
+import { sendSMS } from '@/lib/sms'
 import { getCurrentUserEmail } from '@/lib/auth-utils.server'
 
 export async function POST(request: NextRequest) {
@@ -36,18 +36,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if business has phone number and PhoneID
+    // Check if business has phone number
     if (!businessCustomer.assignedPhoneNumber) {
       return NextResponse.json(
         { success: false, error: 'No phone number assigned to your business. Please contact support.' },
-        { status: 400 }
-      )
-    }
-
-    // REQUIRE PhoneID - do not allow fallback to default number
-    if (!businessCustomer.ezTextingNumberId) {
-      return NextResponse.json(
-        { success: false, error: 'Your phone number is not configured for SMS sending. Please contact support to complete setup.' },
         { status: 400 }
       )
     }
@@ -144,63 +136,22 @@ export async function POST(request: NextRequest) {
     const results = await Promise.allSettled(
       customers.map(async (customer) => {
         try {
-          console.log('[Broadcast] Attempting SMS to:', customer.phoneNumber, {
-            from: businessCustomer.assignedPhoneNumber,
-            phoneId: businessCustomer.ezTextingNumberId
-          })
-
-          // Send SMS via EZTexting with PhoneID
-          const smsResult = await sendSMS({
-            to: customer.phoneNumber,
-            from: businessCustomer.assignedPhoneNumber!,
-            message: message,
-            phoneId: businessCustomer.ezTextingNumberId || undefined
-          })
-
-          console.log('[Broadcast] SMS result:', {
-            success: smsResult.success,
-            error: smsResult.error,
-            messageId: smsResult.messageId
-          })
-
-          // Log the SMS
-          await prisma.smsLog.create({
-            data: {
-              customerId: customer.id,
-              direction: 'OUTBOUND',
-              message: message,
-              status: smsResult.success ? 'SENT' : 'FAILED',
-              errorCode: smsResult.error || null
-            }
-          })
+          // Send SMS via Twilio (sendSMS handles logging internally)
+          await sendSMS(customer.phoneNumber, message, customer.id)
 
           return {
             customerId: customer.id,
             phoneNumber: customer.phoneNumber,
-            success: smsResult.success,
-            error: smsResult.error,
-            details: smsResult // Include full result for debugging
+            success: true
           }
         } catch (error: any) {
           console.error(`[Broadcast] Failed to send to ${customer.phoneNumber}:`, error)
-
-          // Log failed SMS
-          await prisma.smsLog.create({
-            data: {
-              customerId: customer.id,
-              direction: 'OUTBOUND',
-              message: message,
-              status: 'FAILED',
-              errorCode: error?.message || 'Unknown error'
-            }
-          })
 
           return {
             customerId: customer.id,
             phoneNumber: customer.phoneNumber,
             success: false,
-            error: error?.message || 'Failed to send SMS',
-            details: error
+            error: error?.message || 'Failed to send SMS'
           }
         }
       })
@@ -210,23 +161,14 @@ export async function POST(request: NextRequest) {
     const sent = results.filter(r => r.status === 'fulfilled' && r.value.success).length
     const failed = results.length - sent
 
-    // Get first error for debugging
-    const firstError = results.find(r => r.status === 'fulfilled' && !r.value.success)
-    const errorDetails = firstError?.status === 'fulfilled' ? firstError.value.error : null
-
-    console.log('[Broadcast] Results:', { sent, failed, total: results.length, firstError: errorDetails })
+    console.log('[Broadcast] Results:', { sent, failed, total: results.length })
 
     return NextResponse.json({
       success: true,
       sent,
       failed,
       total: results.length,
-      message: `Successfully sent menu to ${sent} customer${sent !== 1 ? 's' : ''}${failed > 0 ? `. ${failed} failed.` : ''}`,
-      errorDetails: failed > 0 ? errorDetails : null, // Include error for debugging
-      debugInfo: {
-        businessPhone: businessCustomer.assignedPhoneNumber,
-        phoneId: businessCustomer.ezTextingNumberId
-      }
+      message: `Successfully sent menu to ${sent} customer${sent !== 1 ? 's' : ''}${failed > 0 ? `. ${failed} failed.` : ''}`
     })
 
   } catch (error: any) {

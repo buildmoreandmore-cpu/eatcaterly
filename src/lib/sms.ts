@@ -1,119 +1,6 @@
 import { prisma } from './db'
-import { isSMSDemoMode, demoSMSResult } from './demo-mode'
-import { ezTextingAuth } from './eztexting-auth'
-
-function getEZTextingConfig() {
-  return {
-    apiUrl: 'https://app.eztexting.com'
-  }
-}
-
-async function sendViaEZTexting(to: string, message: string): Promise<SMSResult> {
-  // Clean phone number (remove +1)
-  const cleanNumber = to.replace(/^\+1/, '').replace(/\D/g, '')
-
-  // Check if we have OAuth tokens
-  const hasOAuthTokens = process.env.EZTEXTING_ACCESS_TOKEN && process.env.EZTEXTING_REFRESH_TOKEN
-
-  if (hasOAuthTokens) {
-    // Use OAuth API (newer method with bearer token)
-    try {
-      const accessToken = await ezTextingAuth.getValidAccessToken()
-
-      const response = await fetch('https://a.eztexting.com/v1/messaging', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`
-        },
-        body: JSON.stringify({
-          phoneNumbers: [cleanNumber],
-          message: message
-        })
-      })
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error('EZ Texting OAuth API error:', {
-          status: response.status,
-          statusText: response.statusText,
-          body: errorText,
-          to: cleanNumber,
-          messageLength: message.length
-        })
-        throw new Error(`EZ Texting OAuth API error: ${response.status} - ${errorText}`)
-      }
-
-      const result = await response.json()
-      console.log('SMS sent successfully via EZ Texting OAuth:', {
-        to: cleanNumber,
-        response: result
-      })
-
-      return {
-        sid: String(result.id || `ez_oauth_${Date.now()}`),
-        status: 'sent'
-      }
-    } catch (error) {
-      console.error('OAuth API failed, falling back to Basic Auth:', error)
-      // Fall through to Basic Auth
-    }
-  }
-
-  // Fallback to Basic Auth (REST API) if OAuth not available or failed
-  const config = getEZTextingConfig()
-  const username = process.env.EZTEXTING_USERNAME || process.env.EZTEXTING_APP_KEY
-  const password = process.env.EZTEXTING_PASSWORD || process.env.EZTEXTING_APP_SECRET
-
-  if (!username || !password) {
-    throw new Error('EZ Texting credentials not configured (need either OAuth tokens or username/password)')
-  }
-
-  // Use form data for REST API
-  const formData = new URLSearchParams()
-  formData.append('User', username)
-  formData.append('Password', password)
-  formData.append('PhoneNumbers[]', cleanNumber)
-  formData.append('Message', message)
-  formData.append('Subject', 'SMS Food Delivery')
-
-  const response = await fetch(`${config.apiUrl}/sending/messages?format=json`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded'
-    },
-    body: formData
-  })
-
-  if (!response.ok) {
-    const errorText = await response.text()
-    console.error('EZ Texting API error:', {
-      status: response.status,
-      statusText: response.statusText,
-      body: errorText,
-      to: cleanNumber,
-      messageLength: message.length
-    })
-    throw new Error(`EZ Texting API error: ${response.status} - ${errorText}`)
-  }
-
-  const result = await response.json()
-
-  // EZ Texting API response structure
-  if (result.Response && result.Response.Status === 'Success') {
-    console.log('SMS sent successfully via EZ Texting:', {
-      to: cleanNumber,
-      messageId: result.Response.Entry?.ID
-    })
-    return {
-      sid: String(result.Response.Entry?.ID || `ez_${Date.now()}`),
-      status: 'sent'
-    }
-  } else {
-    console.error('EZ Texting API returned error:', result)
-    throw new Error(`EZ Texting API error: ${JSON.stringify(result)}`)
-  }
-}
+import { isDemoMode, demoSMSResult } from './demo-mode'
+import * as twilioClient from './twilio-client'
 
 export interface SMSResult {
   sid: string
@@ -129,7 +16,7 @@ export interface BroadcastResult {
 }
 
 /**
- * Send an SMS message via EZ Texting
+ * Send an SMS message via Twilio
  */
 export async function sendSMS(
   to: string,
@@ -137,7 +24,12 @@ export async function sendSMS(
   customerId?: string
 ): Promise<SMSResult> {
   try {
-    if (isSMSDemoMode()) {
+    // Check if Twilio is properly configured
+    const accountSid = process.env.TWILIO_ACCOUNT_SID
+    const authToken = process.env.TWILIO_AUTH_TOKEN
+    const useTwilio = accountSid && authToken
+
+    if (isDemoMode() || !useTwilio) {
       console.log('Demo mode: SMS would be sent to', to, 'with message:', message)
 
       // Try to log demo SMS to database (with error handling)
@@ -158,8 +50,17 @@ export async function sendSMS(
       return demoSMSResult
     }
 
-    console.log('Sending SMS via EZ Texting to', to)
-    const result = await sendViaEZTexting(to, message)
+    console.log('Sending SMS via Twilio to', to)
+    const result = await twilioClient.sendSMS(to, message)
+
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to send SMS')
+    }
+
+    const smsResult: SMSResult = {
+      sid: result.messageId || `twilio_${Date.now()}`,
+      status: 'sent'
+    }
 
     // Log SMS to database (with error handling)
     try {
@@ -169,7 +70,7 @@ export async function sendSMS(
           direction: 'OUTBOUND',
           message,
           status: 'SENT',
-          twilioSid: result.sid,
+          twilioSid: smsResult.sid,
         },
       })
     } catch (dbError) {
@@ -177,7 +78,7 @@ export async function sendSMS(
       // Don't fail the SMS send if database logging fails
     }
 
-    return result
+    return smsResult
   } catch (error: any) {
     // Log failed SMS
     await prisma.smsLog.create({
@@ -458,7 +359,7 @@ async function sendTodaysMenu(): Promise<string> {
  */
 export async function broadcastMenu(): Promise<BroadcastResult> {
   try {
-    if (isSMSDemoMode()) {
+    if (isDemoMode()) {
       console.log('Demo mode: Broadcasting menu to demo customers')
       return {
         sent: 5,
@@ -537,8 +438,6 @@ export async function broadcastMenu(): Promise<BroadcastResult> {
 
     const message = `🍽️ ${menu.title || "Today's Menu"}\\n\\n${menuText}\\n\\nReply with item numbers to order!\\nExample: "Item 1 and Item 3"`
 
-    console.log(`Broadcasting menu to ${customers.length} customers`)
-
     // Send to all customers
     const results = await Promise.allSettled(
       customers.map(customer =>
@@ -551,11 +450,6 @@ export async function broadcastMenu(): Promise<BroadcastResult> {
     const errors = results
       .filter(r => r.status === 'rejected')
       .map(r => (r as PromiseRejectedResult).reason.message)
-
-    console.log(`Broadcast complete: ${sent} sent, ${failed} failed`)
-    if (failed > 0) {
-      console.error('Broadcast errors:', errors)
-    }
 
     return {
       sent,
